@@ -34,15 +34,28 @@
     z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
     letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
 
+  /* КАССЕТНЫЙ ПЛЕЕР */
   #cassettePlayer { position:absolute; inset:0; z-index:14; background:rgba(0,0,0,0.95);
     display:none; flex-direction:column; align-items:center; justify-content:center; padding:10vh 15vw; text-align:left; }
   #cassettePlayer h3 { color:#ffcc00; letter-spacing:3px; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px; width:100%;}
   #cassetteText { font-size:20px; line-height:1.8; color:#e0e0e0; min-height:150px; width:100%; white-space:pre-wrap; }
-  
   #continueBtn { margin-top:40px; display:none; background:none; border:1px solid #ffcc00;
     color:#ffcc00; padding:12px 34px; font-family:inherit; font-size:16px;
     letter-spacing:3px; cursor:pointer; transition: 0.3s; align-self: flex-start; }
   #continueBtn:hover { background:#ffcc00; color:#000; }
+
+  /* КОДОВАЯ ПАНЕЛЬ */
+  #keypadUI { position:absolute; inset:0; z-index:16; background:rgba(0,0,0,0.85);
+    display:none; flex-direction:column; align-items:center; justify-content:center; }
+  #keypadScreen { font-size:48px; letter-spacing:12px; color:#00ff00; text-shadow:0 0 20px #00ff00;
+    background:#111; padding:20px 40px; border:2px solid #333; border-radius:5px; margin-bottom:30px; min-width:300px; text-align:center; }
+  .keypad-grid { display:grid; grid-template-columns: repeat(3, 80px); gap:15px; }
+  .keypad-btn { background:#222; color:#eee; border:1px solid #444; font-size:28px; padding:15px;
+    font-family:inherit; cursor:pointer; transition:0.2s; border-radius:5px; }
+  .keypad-btn:hover { background:#444; }
+  .keypad-btn:active { background:#00ff00; color:#000; }
+  #keypadClear { grid-column: span 2; font-size:18px; }
+  #keypadEnter { font-size:18px; background:#0a2a0a; color:#00ff00; border-color:#00ff00; }
 
   #title { position:absolute; inset:0; z-index:12;
     background:#000; display:flex; flex-direction:column;
@@ -70,7 +83,6 @@
 <div id="app">
   <audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
   <audio id="cassetteAudio2" src="instructions_2.wav" preload="auto"></audio>
-  <audio id="cassetteAudio3" src="instructions_3.wav" preload="auto"></audio>
 
   <canvas id="cv"></canvas>
   <div id="vhs"></div>
@@ -97,6 +109,25 @@
     <h3 id="cassetteTitle">■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ...</h3>
     <div id="cassetteText"></div>
     <button id="continueBtn">ПРОДОЛЖИТЬ</button>
+  </div>
+
+  <!-- КОДОВАЯ ПАНЕЛЬ -->
+  <div id="keypadUI">
+    <div id="keypadScreen">_ _ _</div>
+    <div class="keypad-grid">
+      <button class="keypad-btn" onclick="pressKey('1')">1</button>
+      <button class="keypad-btn" onclick="pressKey('2')">2</button>
+      <button class="keypad-btn" onclick="pressKey('3')">3</button>
+      <button class="keypad-btn" onclick="pressKey('4')">4</button>
+      <button class="keypad-btn" onclick="pressKey('5')">5</button>
+      <button class="keypad-btn" onclick="pressKey('6')">6</button>
+      <button class="keypad-btn" onclick="pressKey('7')">7</button>
+      <button class="keypad-btn" onclick="pressKey('8')">8</button>
+      <button class="keypad-btn" onclick="pressKey('9')">9</button>
+      <button class="keypad-btn" id="keypadClear" onclick="clearKeypad()">СБРОС</button>
+      <button class="keypad-btn" onclick="pressKey('0')">0</button>
+      <button class="keypad-btn" id="keypadEnter" onclick="submitKeypad()">ВВОД</button>
+    </div>
   </div>
 
   <div id="title">
@@ -144,7 +175,9 @@
   const elContinueBtn = document.getElementById('continueBtn');
   const audio1 = document.getElementById('cassetteAudio');
   const audio2 = document.getElementById('cassetteAudio2');
-  const audio3 = document.getElementById('cassetteAudio3');
+
+  const elKeypadUI = document.getElementById('keypadUI');
+  const elKeypadScreen = document.getElementById('keypadScreen');
 
   // --- ГЕНЕРАТОР ЗВУКОВ (Web Audio API) ---
   let audioCtx = null;
@@ -166,7 +199,6 @@
     osc.stop(audioCtx.currentTime + duration);
   }
 
-  // УСИЛЕННЫЙ ЗВУК ШАГОВ
   function playFootstep(isSprint) {
     if (!audioCtx) return;
     let osc = audioCtx.createOscillator();
@@ -175,13 +207,30 @@
     let freq = 60 + Math.random() * 20;
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.15);
-    // Громкость увеличена в 4 раза (было 0.1/0.05)
     gain.gain.setValueAtTime(isSprint ? 0.4 : 0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
+  }
+
+  let lastMonsterSound = 0;
+  function playMonsterGrowl() {
+    initAudio();
+    if (state.time - lastMonsterSound < 1.5) return;
+    lastMonsterSound = state.time;
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(40, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5);
   }
 
   function playClick() {
@@ -271,7 +320,10 @@
     rift: { x: 8.5, y: 1.5, active: false },
     locker: { x: 3.5, y: 3.5, active: false },
     cassette: { x: 11.5, y: 14.5, active: false },
-    gate: { x: 14.5, y: 1.5 },
+    gate: { x: 14.5, y: 14.5 },
+    monster: { x: 0, y: 0, active: false, speed: 2.5 },
+    keypadInput: "",
+    keypadActive: false,
     msgT: 0,
     currentAudio: null,
     currentCassetteType: 0
@@ -305,6 +357,9 @@
     state.rift.active = false;
     state.locker.active = false;
     state.cassette.active = false;
+    state.monster.active = false;
+    state.keypadActive = false;
+    elKeypadUI.style.display = 'none';
     elFound.style.display = 'inline';
     elInventory.style.display = 'none';
     elInvFlashlight.style.display = 'none';
@@ -323,6 +378,10 @@
     state.rift.active = false;
     state.locker = { x: 3.5, y: 3.5, active: false };
     state.cassette = { x: 11.5, y: 14.5, active: true };
+    state.monster = { x: 0, y: 0, active: false, speed: 2.0 };
+    state.gateActive = false;
+    state.keypadActive = false;
+    elKeypadUI.style.display = 'none';
     elFound.style.display = 'none';
     elObjective.textContent = 'НАЙДИ КАССЕТУ';
     say('Уровень 2. Доктор сказал про кассету...', 5);
@@ -371,7 +430,6 @@
   let typeTimer;
   const cassetteMessage1 = "Привет. Это доктор Пробикин. Очень здорово, что ты добрался до этого места. Подойди до шкафа, там ты найдешь фонарик и карту шлюзов. Дальнейшие указания будут там же. Береги рассудок.";
   const cassetteMessage2 = "Слушай внимательно. Время на исходе. Рядом должен быть второй шкаф. Внутри — код от шлюзов. Они уже близко. Не оглядывайся, просто бери кассету и уходи.";
-  const cassetteMessage3 = "Отлично, ты нашел шлюз. Это последняя запись. Введи код 5-0-5 на панели, и дверь откроется. За ней — безопасная зона. Я жду тебя там. И пожалуйста, не оборачивайся.";
 
   function playCassette(type) {
     playClick();
@@ -394,10 +452,6 @@
       textToType = cassetteMessage2;
       state.currentAudio = audio2;
       elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 2...';
-    } else if (type === 3) {
-      textToType = cassetteMessage3;
-      state.currentAudio = audio3;
-      elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 3...';
     }
 
     if (state.currentAudio) {
@@ -418,6 +472,44 @@
         elContinueBtn.style.display = 'block';
       }
     }, 40);
+  }
+
+  // --- КОДОВАЯ ПАНЕЛЬ ---
+  window.pressKey = function(num) {
+    playClick();
+    if (state.keypadInput.length < 3) {
+      state.keypadInput += num;
+      updateKeypadScreen();
+    }
+  };
+
+  window.clearKeypad = function() {
+    playClick();
+    state.keypadInput = "";
+    updateKeypadScreen();
+  };
+
+  window.submitKeypad = function() {
+    playClick();
+    if (state.keypadInput === "505") {
+      elKeypadUI.style.display = 'none';
+      document.exitPointerLock();
+      finish(true);
+    } else {
+      elKeypadScreen.style.color = '#ff0000';
+      elKeypadScreen.textContent = 'ОШИБКА';
+      playTone(100, 'sawtooth', 0.5, 0.2);
+      setTimeout(() => {
+        state.keypadInput = "";
+        updateKeypadScreen();
+      }, 1000);
+    }
+  };
+
+  function updateKeypadScreen() {
+    elKeypadScreen.style.color = '#00ff00';
+    let display = state.keypadInput.padEnd(3, '_').split('').join(' ');
+    elKeypadScreen.textContent = display;
   }
 
   function update(dt) {
@@ -453,6 +545,23 @@
       if (!collide(p.x, ny)) p.y = ny;
     } else {
       state.stepTimer = 0;
+    }
+
+    // ЛОГИКА МОНСТРА
+    if (state.monster.active) {
+      let m = state.monster;
+      let angleToPlayer = Math.atan2(p.y - m.y, p.x - m.x);
+      
+      m.x += Math.cos(angleToPlayer) * m.speed * dt;
+      m.y += Math.sin(angleToPlayer) * m.speed * dt;
+
+      playMonsterGrowl();
+
+      if (Math.hypot(p.x - m.x, p.y - m.y) < 0.6) {
+        state.running = false;
+        document.exitPointerLock();
+        finish(false);
+      }
     }
 
     let decay = state.level === 1 ? 0.6 : 1.2;
@@ -551,14 +660,19 @@
         }
       }
 
+      // ЛОГИКА ШЛЮЗА
       if (state.gateActive) {
         let gDist = Math.hypot(state.gate.x - p.x, state.gate.y - p.y);
         if (gDist < 2.0) {
-          elRiftPrompt.textContent = '// открыть шлюз';
+          elRiftPrompt.textContent = '// ВВЕДИТЕ КОД';
           elRiftPrompt.style.opacity = 1;
           if (k.e) {
             k.e = false;
-            playCassette(3);
+            state.running = false; 
+            document.exitPointerLock(); 
+            elKeypadUI.style.display = 'flex';
+            state.keypadInput = "";
+            updateKeypadScreen();
           }
         } else {
           elRiftPrompt.style.opacity = 0;
@@ -621,11 +735,13 @@
       });
       if (state.rift.active) renderList.push({ type: 'rift', x: state.rift.x, y: state.rift.y });
     } else if (state.level === 2) {
-      if (state.locker.active || state.locker.active === false && !state.hasCassette2) {
-        if (!state.hasCassette2) renderList.push({ type: 'locker', x: state.locker.x, y: state.locker.y });
-      }
+      if (!state.hasCassette2) renderList.push({ type: 'locker', x: state.locker.x, y: state.locker.y });
       if (state.cassette.active) renderList.push({ type: 'cassette', x: state.cassette.x, y: state.cassette.y });
       if (state.gateActive) renderList.push({ type: 'gate', x: state.gate.x, y: state.gate.y });
+    }
+
+    if (state.monster.active) {
+      renderList.push({ type: 'monster', x: state.monster.x, y: state.monster.y });
     }
 
     renderList = renderList.map(obj => {
@@ -644,7 +760,7 @@
         let cy = vh / 2;
         let rayToObj = castRay(obj.angle);
         
-        if (rayToObj.dist > obj.dist) {
+        if (rayToObj.dist > obj.dist || obj.type === 'monster') {
           if (obj.type === 'anomaly') {
             let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/2);
             grad.addColorStop(0, 'rgba(0, 191, 255, 0.9)');
@@ -702,6 +818,31 @@
             ctx.fillStyle = `rgba(0, 255, 0, ${0.5 * pulse})`;
             ctx.fillRect(screenX - w/2 + 5, cy - h/2 + 5, w - 10, h - 10);
           }
+          else if (obj.type === 'monster') {
+            let r = size * 0.4;
+            let pulse = Math.sin(state.time * 10) * 0.1 + 0.9;
+            
+            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, r * 2);
+            grad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`);
+            grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(screenX, cy, r * 2, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#ff1111';
+            ctx.beginPath(); ctx.arc(screenX, cy, r, 0, Math.PI*2); ctx.fill();
+
+            ctx.strokeStyle = '#aa0000';
+            ctx.lineWidth = Math.max(2, r * 0.15);
+            for (let t = 0; t < 3; t++) {
+              ctx.beginPath();
+              ctx.moveTo(screenX, cy);
+              let wave = Math.sin(state.time * 15 + t * 2) * r * 0.5;
+              let endX = screenX - r*1.5 + t * r * 1.5 + wave;
+              let endY = cy + r * 1.5;
+              ctx.quadraticCurveTo(screenX + wave, cy + r, endX, endY);
+              ctx.stroke();
+            }
+          }
         }
       }
     }
@@ -710,10 +851,9 @@
       let radius = 0.02; 
       let darkness = 0.99; 
       
-      // УСИЛЕННЫЙ ФОНАРИК (радиус увеличен в 3 раза)
       if (state.hasFlashlight && state.battery > 0) {
-        radius = 1.05; // Было 0.35
-        darkness = 0.65; // Было 0.85 (стало светлее)
+        radius = 1.05; 
+        darkness = 0.65; 
       }
       
       let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*radius, vw/2, vh/2, Math.max(vw,vh)*0.7);
@@ -777,6 +917,11 @@
         ctx.strokeStyle = '#fff'; ctx.stroke();
       }
     }
+    
+    if (state.monster.active) {
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, 6, 0, Math.PI*2); ctx.fill();
+    }
 
     ctx.fillStyle = '#dcdcdc';
     ctx.beginPath(); ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2); ctx.fill();
@@ -837,7 +982,6 @@
     playClick();
     audio1.pause(); audio1.currentTime = 0;
     audio2.pause(); audio2.currentTime = 0;
-    audio3.pause(); audio3.currentTime = 0;
     elCassettePlayer.style.display = 'none';
     
     if (state.currentCassetteType === 1) {
@@ -845,13 +989,16 @@
       cv.requestPointerLock();
       elObjective.textContent = 'НАЙДИ ШКАФ';
     } else if (state.currentCassetteType === 2) {
+      // АКТИВАЦИЯ ШЛЮЗА И МОНСТРА
       state.gateActive = true;
-      elObjective.textContent = 'НАЙДИ ШЛЮЗ';
-      say('Код у тебя. Найди зеленый шлюз.', 5);
+      state.monster.active = true;
+      state.monster.x = state.player.x - Math.cos(state.player.angle) * 6;
+      state.monster.y = state.player.y - Math.sin(state.player.angle) * 6;
+      
+      elObjective.textContent = 'БЕГИ К ШЛЮЗУ!';
+      say('Оно уже здесь! Вводи код!', 5);
       state.running = true;
       cv.requestPointerLock();
-    } else if (state.currentCassetteType === 3) {
-      finish(true);
     }
   });
 
@@ -859,10 +1006,9 @@
     playClick();
     initAudio();
 
-    audio1.volume = 0; audio2.volume = 0; audio3.volume = 0;
+    audio1.volume = 0; audio2.volume = 0;
     audio1.play().then(() => { audio1.pause(); audio1.currentTime = 0; audio1.volume = 1; }).catch(e => console.log(e));
     audio2.play().then(() => { audio2.pause(); audio2.currentTime = 0; audio2.volume = 1; }).catch(e => console.log(e));
-    audio3.play().then(() => { audio3.pause(); audio3.currentTime = 0; audio3.volume = 1; }).catch(e => console.log(e));
 
     buildLevel1();
     state.time = 0;
@@ -875,6 +1021,7 @@
     elTitle.style.display = 'none';
     elEnd.style.display = 'none';
     elCassettePlayer.style.display = 'none';
+    elKeypadUI.style.display = 'none';
     state.running = true;
   }
 
@@ -882,8 +1029,15 @@
     state.running = false;
     document.exitPointerLock();
     elEnd.style.display = 'flex';
-    elEndTitle.textContent = win ? 'ШЛЮЗ ОТКРЫТ' : 'ПОТЕРЯ РАССУДКА';
-    elEndText.textContent = win ? 'Ты вошел в безопасную зону. Доктор Пробикин ждет тебя.' : 'Ты не успел. Реальность растворилась.';
+    if (win) {
+      elEndTitle.textContent = 'ЛАБОРАТОРИЯ';
+      elEndTitle.style.color = '#00ff00';
+      elEndText.textContent = 'Доктор Пробикин: "Отличная работа. Добро пожаловать в безопасную зону."';
+    } else {
+      elEndTitle.textContent = 'ПОТЕРЯ РАССУДКА';
+      elEndTitle.style.color = '#ff0000';
+      elEndText.textContent = 'Тьма поглотила тебя. Реальность растворилась.';
+    }
   }
 
   document.getElementById('startBtn').addEventListener('click', startGame);
