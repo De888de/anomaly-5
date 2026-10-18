@@ -21,7 +21,6 @@
     font-size:14px; line-height:1.6; text-shadow:0 0 8px #000; }
   #found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
   
-  /* Стили для инвентаря и батарейки */
   #inventory { margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; display: none;}
   .inv-item { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; font-weight: bold; }
 
@@ -101,7 +100,7 @@
     <p class="story">
       Ты — оператор выездной группы.<br><br>
       Стрелки — движение · Мышь — поворот камеры<br>
-      SHIFT — бег · E — взаимодействие
+      SHIFT — бег · E — взаимодействие · F — фонарик
     </p>
     <button id="startBtn">НАЧАТЬ</button>
   </div>
@@ -136,6 +135,158 @@
   const elCassetteText = document.getElementById('cassetteText');
   const elContinueBtn = document.getElementById('continueBtn');
   const audio = document.getElementById('cassetteAudio');
+
+  // --- WEB AUDIO API ---
+  let audioCtx = null;
+  let noiseBuffer = null;
+  let stepTimer = 0;
+  let breathTimer = 0;
+  let heartTimer = 0;
+  let flashlightHumOsc = null;
+  let flashlightHumGain = null;
+  let flashlightOn = false;
+
+  function initAudio() {
+    if (audioCtx) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+
+    const bufferSize = audioCtx.sampleRate * 2;
+    noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+
+  function playFootstep(isSprint) {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    const source = audioCtx.createBufferSource();
+    source.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = isSprint ? 600 : 400;
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    const vol = isSprint ? 0.6 : 0.3; // Сделали шаги громче
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    source.start(now); source.stop(now + 0.2);
+  }
+
+  function playBreath() {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    const source = audioCtx.createBufferSource();
+    source.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 800; filter.Q.value = 0.5;
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.15, now + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    source.start(now); source.stop(now + 1.3);
+  }
+
+  function playHeartbeat() {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(60, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.5, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+  }
+
+  function playPickupSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+  }
+
+  function playClickSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.setValueAtTime(50, now + 0.05);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.1);
+  }
+
+  function playLockerSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.linearRampToValueAtTime(120, now + 0.2);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.4);
+  }
+
+  function playJumpScareSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1000, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+    gain.gain.setValueAtTime(0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.5);
+  }
+
+  function startFlashlightHum() {
+    if (!audioCtx || flashlightOn) return;
+    flashlightOn = true;
+    flashlightHumOsc = audioCtx.createOscillator();
+    flashlightHumGain = audioCtx.createGain();
+    flashlightHumOsc.type = 'sine';
+    flashlightHumOsc.frequency.value = 120;
+    flashlightHumGain.gain.value = 0.03;
+    flashlightHumOsc.connect(flashlightHumGain);
+    flashlightHumGain.connect(audioCtx.destination);
+    flashlightHumOsc.start();
+  }
+
+  function stopFlashlightHum() {
+    if (!flashlightOn) return;
+    flashlightOn = false;
+    if (flashlightHumOsc) {
+      flashlightHumOsc.stop();
+      flashlightHumOsc.disconnect();
+      flashlightHumOsc = null;
+    }
+  }
+
+  // ---------------------
 
   const map1 = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -184,12 +335,14 @@
     found: 0,
     time: 0,
     hasFlashlight: false,
+    flashlightOn: false,
     battery: 100,
     player: { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 },
     keys: {},
     anomalies: [],
     rift: { x: 8.5, y: 1.5, active: false },
     locker: { x: 3.5, y: 3.5, active: false },
+    table: { x: 13.5, y: 14.5, active: false },
     cassette: { x: 13.5, y: 14.5, active: false },
     msgT: 0
   };
@@ -207,6 +360,8 @@
     state.sanity = 100;
     state.found = 0;
     state.hasFlashlight = false;
+    state.flashlightOn = false;
+    stopFlashlightHum();
     state.battery = 100;
     state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [
@@ -218,6 +373,7 @@
     ];
     state.rift.active = false;
     state.locker.active = false;
+    state.table.active = false;
     state.cassette.active = false;
     elFound.style.display = 'inline';
     elInventory.style.display = 'none';
@@ -232,7 +388,8 @@
     state.player = { x: 1.5, y: 1.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [];
     state.rift.active = false;
-    state.locker = { x: 3.5, y: 3.5, active: true }; // Шкаф
+    state.locker = { x: 3.5, y: 3.5, active: true }; 
+    state.table = { x: 13.5, y: 14.5, active: true };
     state.cassette = { x: 13.5, y: 14.5, active: true };
     elFound.style.display = 'none';
     elObjective.textContent = 'НАЙДИ КАССЕТУ';
@@ -290,8 +447,11 @@
     elCassetteText.textContent = '';
     elContinueBtn.style.display = 'none';
     
-    audio.currentTime = 0;
-    audio.play().catch(e => console.log("Браузер заблокировал звук:", e));
+    playJumpScareSound(); // Резкий звук перед записью
+    setTimeout(() => {
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log("Браузер заблокировал звук:", e));
+    }, 500);
 
     let i = 0;
     clearInterval(typeTimer);
@@ -321,6 +481,8 @@
     if (k.left) { dx += Math.cos(p.angle - Math.PI/2); dy += Math.sin(p.angle - Math.PI/2); }
     if (k.right) { dx += Math.cos(p.angle + Math.PI/2); dy += Math.sin(p.angle + Math.PI/2); }
 
+    let isMoving = false;
+
     if (dx !== 0 || dy !== 0) {
       let len = Math.hypot(dx, dy);
       dx = (dx / len) * moveSpeed;
@@ -328,22 +490,49 @@
       
       let nx = p.x + dx;
       let ny = p.y + dy;
-      if (!collide(nx, p.y)) p.x = nx;
-      if (!collide(p.x, ny)) p.y = ny;
+      if (!collide(nx, p.y)) { p.x = nx; isMoving = true; }
+      if (!collide(p.x, ny)) { p.y = ny; isMoving = true; }
+    }
+
+    // ЗВУКИ ШАГОВ
+    if (isMoving) {
+      stepTimer -= dt;
+      if (stepTimer <= 0) {
+        playFootstep(sprint);
+        stepTimer = sprint ? 0.25 : 0.45;
+      }
+      if (sprint) {
+        breathTimer -= dt;
+        if (breathTimer <= 0) { playBreath(); breathTimer = 1.5; }
+      }
+    } else { stepTimer = 0; }
+
+    // ЗВУК СЕРДЦА (если рассудок падает)
+    if (state.sanity < 60) {
+      heartTimer -= dt;
+      if (heartTimer <= 0) {
+        playHeartbeat();
+        // Чем меньше рассудок, тем чаще стук
+        let rate = state.sanity < 30 ? 0.5 : (state.sanity < 45 ? 0.8 : 1.2);
+        heartTimer = rate;
+      }
     }
 
     // Рассудок и батарейка
     let decay = state.level === 1 ? 0.6 : 1.2;
     if (sprint) decay += 1.8;
 
-    // Логика батарейки
-    if (state.hasFlashlight && state.battery > 0) {
-      state.battery -= 0.5 * dt; // Садится батарейка
-      if (state.battery < 0) state.battery = 0;
+    if (state.hasFlashlight && state.flashlightOn && state.battery > 0) {
+      state.battery -= 0.5 * dt;
+      if (state.battery < 0) {
+        state.battery = 0;
+        state.flashlightOn = false;
+        stopFlashlightHum();
+        say('Фонарик погас...', 3);
+      }
       elBatteryLevel.textContent = Math.floor(state.battery);
-      if (state.battery === 0) say('Фонарик погас...', 3);
-    } else if (state.hasFlashlight && state.battery <= 0) {
-      decay += 2.0; // В темноте без фонарика рассудок падает быстрее
+    } else if (state.hasFlashlight && !state.flashlightOn && state.level === 2) {
+      decay += 1.5; // Без света рассудок падает быстрее
     }
     
     if (state.level === 1) {
@@ -357,6 +546,7 @@
           a.found = true;
           state.found++;
           elFound.textContent = state.found;
+          playPickupSound();
           say('Зафиксировано: ' + a.name, 3);
           state.sanity = Math.min(100, state.sanity + 6);
           
@@ -371,17 +561,12 @@
         let rDist = Math.hypot(state.rift.x - p.x, state.rift.y - p.y);
         if (rDist < 1.5) {
           elRiftPrompt.style.opacity = 1;
-          if (k.e) {
-            k.e = false;
-            buildLevel2();
-          }
-        } else {
-          elRiftPrompt.style.opacity = 0;
-        }
+          if (k.e) { k.e = false; buildLevel2(); }
+        } else { elRiftPrompt.style.opacity = 0; }
       }
     } 
     else if (state.level === 2) {
-      // Взаимодействие со шкафом
+      // Шкаф
       if (state.locker.active) {
         let lDist = Math.hypot(state.locker.x - p.x, state.locker.y - p.y);
         if (lDist < 1.5) {
@@ -392,18 +577,17 @@
             state.locker.active = false;
             state.hasFlashlight = true;
             state.battery = 100;
-            elInventory.style.display = 'block'; // Показываем инвентарь
-            elInvFlashlight.style.display = 'block'; // Показываем фонарик
+            playLockerSound();
+            elInventory.style.display = 'block';
+            elInvFlashlight.style.display = 'block';
             elBatteryLevel.textContent = '100';
-            say('Вы взяли фонарик. Теперь найдите кассету.', 5);
+            say('Вы взяли фонарик. (F - включить/выключить)', 5);
             elRiftPrompt.style.opacity = 0;
           }
-        } else {
-          elRiftPrompt.style.opacity = 0;
-        }
+        } else { elRiftPrompt.style.opacity = 0; }
       }
 
-      // Взаимодействие с кассетой
+      // Кассета на столе
       if (state.cassette.active) {
         let cDist = Math.hypot(state.cassette.x - p.x, state.cassette.y - p.y);
         if (cDist < 1.5) {
@@ -412,6 +596,8 @@
           if (k.e) {
             k.e = false;
             state.cassette.active = false;
+            state.table.active = false; // Убираем стол
+            playPickupSound();
             playCassette(); 
           }
         } else {
@@ -443,7 +629,6 @@
     const fov = Math.PI / 3;
     const focalLength = (vw / 2) / Math.tan(fov / 2);
 
-    // 3D Стены
     for (let x = 0; x < vw; x++) {
       let rayAngle = p.angle - fov/2 + (x / vw) * fov;
       let res = castRay(rayAngle);
@@ -456,7 +641,8 @@
       let drawStart = -wallHeight / 2 + vh / 2;
       
       let lightMod = state.level === 2 ? 0.6 : 1;
-      if (state.hasFlashlight && state.battery > 0 && state.level === 2) lightMod = 0.85;
+      // Фонарик делает стены видимыми
+      if (state.hasFlashlight && state.flashlightOn && state.battery > 0 && state.level === 2) lightMod = 1.0;
 
       let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
       let c = res.side === 0 ? 45 : 30;
@@ -469,7 +655,6 @@
       ctx.fillRect(x, drawStart, 1, wallHeight);
     }
 
-    // Рендер Аномалий
     let sorted = state.anomalies.map(a => {
       let dx = a.x - p.x, dy = a.y - p.y;
       return { ...a, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
@@ -499,7 +684,6 @@
       }
     }
 
-    // РЕНДЕР ТРЕЩИНЫ (Восстановлен!)
     if (state.level === 1 && state.rift.active) {
       let dx = state.rift.x - p.x, dy = state.rift.y - p.y;
       let dist = Math.hypot(dx, dy);
@@ -522,15 +706,12 @@
           grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
           ctx.fillStyle = grad;
           ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
-          
-          // Белая сердцевина
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(screenX - size/30, cy - h/3, size/15, h/1.5);
         }
       }
     }
 
-    // Рендер Шкафа (2 уровень)
     if (state.level === 2 && state.locker.active) {
       let dx = state.locker.x - p.x, dy = state.locker.y - p.y;
       let dist = Math.hypot(dx, dy);
@@ -551,16 +732,15 @@
           ctx.fillRect(screenX - size/6, cy - h/2, size/3, h);
           ctx.fillStyle = '#2a1f15';
           ctx.fillRect(screenX - size/8, cy - h/3, size/4, h/1.5);
-          // Ручка
           ctx.fillStyle = '#d4af37';
           ctx.fillRect(screenX + size/20, cy, size/30, size/30);
         }
       }
     }
 
-    // Рендер Кассеты (2 уровень)
-    if (state.level === 2 && state.cassette.active) {
-      let dx = state.cassette.x - p.x, dy = state.cassette.y - p.y;
+    // Стол с кассетой
+    if (state.level === 2 && state.table.active) {
+      let dx = state.table.x - p.x, dy = state.table.y - p.y;
       let dist = Math.hypot(dx, dy);
       let angle = Math.atan2(dy, dx);
       let angleDiff = angle - p.angle;
@@ -570,41 +750,56 @@
       if (Math.abs(angleDiff) < fov / 2 + 0.5) {
         let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
         let size = focalLength / dist;
-        let rayToCas = castRay(angle);
+        let rayToTable = castRay(angle);
         
-        if (rayToCas.dist > dist) {
-          let cy = vh / 2 + 10;
-          let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/3);
-          grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
-          grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
-          ctx.fillStyle = grad;
-          ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
+        if (rayToTable.dist > dist) {
+          let cy = vh / 2 + size * 0.15; // Опускаем стол вниз
+          let w = size * 0.8;
+          let h = size * 0.3;
           
-          ctx.fillStyle = '#222'; ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10);
-          ctx.fillStyle = '#ffcc00'; ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
+          // Стол (коричневый прямоугольник)
+          ctx.fillStyle = '#3a2510';
+          ctx.fillRect(screenX - w/2, cy - h/2, w, h);
+          // Ножки стола (просто темные полосы вниз)
+          ctx.fillStyle = '#1a1005';
+          ctx.fillRect(screenX - w/2 + 10, cy + h/2, w/10, size*0.4);
+          ctx.fillRect(screenX + w/2 - 10 - w/10, cy + h/2, w/10, size*0.4);
+          
+          // Кассета на столе (желтая)
+          if (state.cassette.active) {
+            let casW = w * 0.2;
+            let casH = h * 0.4;
+            let grad = ctx.createRadialGradient(screenX, cy - h/2, 0, screenX, cy - h/2, size/3);
+            grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+            grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(screenX, cy - h/2, size/3, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#222'; ctx.fillRect(screenX - casW/2, cy - h/2 - casH/2, casW, casH);
+            ctx.fillStyle = '#ffcc00'; ctx.fillRect(screenX - casW/2 + 4, cy - h/2 - casH/2 + 4, casW - 8, casH - 8);
+          }
         }
       }
     }
 
-    // --- ЭФФЕКТ ФОНАРИКА (Уровень 2) ---
+    // --- МОЩНЫЙ ФОНАРИК ---
     if (state.level === 2) {
-      let radius = 0.02; // Очень маленький радиус (почти ничего не видно)
-      let darkness = 0.99; // Почти полная тьма
+      let radius = 0.02;
+      let darkness = 0.99;
       
-      // Если есть фонарик и батарейка не села
-      if (state.hasFlashlight && state.battery > 0) {
-        radius = 0.35; // Большой радиус света
-        darkness = 0.85; // Светлее
+      if (state.hasFlashlight && state.flashlightOn && state.battery > 0) {
+        radius = 0.5; // Огромный радиус света
+        darkness = 0.95; // Края темные, но в центре всё видно
       }
 
-      let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*radius, vw/2, vh/2, Math.max(vw,vh)*0.7);
+      let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*radius, vw/2, vh/2, Math.max(vw,vh)*0.8);
       flGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      flGrad.addColorStop(0.5, `rgba(0,0,0,${darkness * 0.9})`);
-      flGrad.addColorStop(1, `rgba(0,0,0,${darkness})`);
+      flGrad.addColorStop(0.4, `rgba(0,0,0,${darkness * 0.5})`);
+      flGrad.addColorStop(0.8, `rgba(0,0,0,${darkness})`);
+      flGrad.addColorStop(1, `rgba(0,0,0,1)`);
       ctx.fillStyle = flGrad;
       ctx.fillRect(0,0,vw,vh);
 
-      // Синий туман
       let fogHeight = vh * 0.4;
       let fogOffset = Math.sin(state.time * 2) * 20;
       let fogGrad = ctx.createLinearGradient(0, vh - fogHeight + fogOffset, 0, vh);
@@ -615,7 +810,6 @@
       ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
     }
 
-    // --- МИНИ-КАРТА ---
     const cell = 12; 
     const mapW = currentMap[0].length * cell;
     const mapH = currentMap.length * cell;
@@ -651,9 +845,13 @@
       ctx.fillRect(ox + state.locker.x*cell - 4, oy + state.locker.y*cell - 4, 8, 8);
     }
 
-    if (state.level === 2 && state.cassette.active) {
-      ctx.fillStyle = '#ffcc00';
-      ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2); ctx.fill();
+    if (state.level === 2 && state.table.active) {
+      ctx.fillStyle = '#3a2510';
+      ctx.fillRect(ox + state.table.x*cell - 6, oy + state.table.y*cell - 6, 12, 12);
+      if (state.cassette.active) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2); ctx.fill();
+      }
     }
 
     ctx.fillStyle = '#dcdcdc';
@@ -661,7 +859,6 @@
     ctx.strokeStyle = '#dcdcdc';
     ctx.beginPath(); ctx.moveTo(ox + p.x*cell, oy + p.y*cell); ctx.lineTo(ox + (p.x + Math.cos(p.angle)*1.5)*cell, oy + (p.y + Math.sin(p.angle)*1.5)*cell); ctx.stroke();
 
-    // Виньетка от рассудка
     let s = state.sanity / 100;
     if (s < 0.6) {
       let v = (0.6 - s) / 0.6;
@@ -690,6 +887,17 @@
     if (e.code === 'ArrowRight') state.keys.right = true;
     if (e.code === 'KeyE') state.keys.e = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = true;
+    
+    // Включение/выключение фонарика
+    if (e.code === 'KeyF' && state.running) {
+      if (state.hasFlashlight && state.battery > 0) {
+        playClickSound();
+        state.flashlightOn = !state.flashlightOn;
+        if (state.flashlightOn) startFlashlightHum();
+        else stopFlashlightHum();
+      }
+    }
+
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
 
@@ -719,9 +927,15 @@
   });
 
   function startGame() {
+    initAudio(); 
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
     buildLevel1();
     state.time = 0;
     state.keys = {};
+    stepTimer = 0;
+    breathTimer = 0;
+    heartTimer = 0;
     elRiftPrompt.style.opacity = 0;
     elSanity.textContent = '100';
     elFound.textContent = '0';
@@ -736,6 +950,7 @@
 
   function finish(win) {
     state.running = false;
+    stopFlashlightHum();
     document.exitPointerLock();
     elEnd.style.display = 'flex';
     elEndTitle.textContent = win ? 'КАССЕТА НАЙДЕНА' : 'ПОТЕРЯ РАССУДКА';
