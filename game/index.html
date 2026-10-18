@@ -20,6 +20,11 @@
   #hud { position:absolute; left:16px; bottom:16px; z-index:7;
     font-size:14px; line-height:1.6; text-shadow:0 0 8px #000; }
   #found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
+  
+  /* Стили для инвентаря и батарейки */
+  #inventory { margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; display: none;}
+  .inv-item { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; font-weight: bold; }
+
   #objective { position:absolute; top:16px; left:16px; z-index:7; font-size:16px; color:#00bfff; text-shadow:0 0 10px #00bfff;}
   
   #subs { position:absolute; bottom:80px; left:0; right:0; text-align:center;
@@ -30,7 +35,6 @@
     z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
     letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
 
-  /* Интерфейс кассетного плеера */
   #cassettePlayer { position:absolute; inset:0; z-index:14; background:rgba(0,0,0,0.95);
     display:none; flex-direction:column; align-items:center; justify-content:center; padding:10vh 15vw; text-align:left; }
   #cassettePlayer h3 { color:#ffcc00; letter-spacing:3px; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px; width:100%;}
@@ -64,7 +68,6 @@
 </head>
 <body>
 <div id="app">
-  <!-- Подключаем аудиофайл -->
   <audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
 
   <canvas id="cv"></canvas>
@@ -73,10 +76,17 @@
   <div id="riftPrompt">// начинаем путь</div>
 
   <div id="objective">СОБЕРИ 5 АНОМАЛИЙ</div>
+  
   <div id="hud">
     РАССУДОК: <span id="sanity">100</span>%<br>
     АНОМАЛИИ: <span id="found">0</span> / 5
+    
+    <div id="inventory">
+      ИНВЕНТАРЬ:<br>
+      <div class="inv-item" id="invFlashlight" style="display:none;">🔦 ФОНАРИК (<span id="batteryLevel">100</span>%)</div>
+    </div>
   </div>
+  
   <div id="subs"></div>
 
   <div id="cassettePlayer">
@@ -117,6 +127,10 @@
   const elEndTitle = document.getElementById('endTitle');
   const elEndText = document.getElementById('endText');
   const elRiftPrompt = document.getElementById('riftPrompt');
+  
+  const elInventory = document.getElementById('inventory');
+  const elInvFlashlight = document.getElementById('invFlashlight');
+  const elBatteryLevel = document.getElementById('batteryLevel');
   
   const elCassettePlayer = document.getElementById('cassettePlayer');
   const elCassetteText = document.getElementById('cassetteText');
@@ -169,10 +183,13 @@
     sanity: 100,
     found: 0,
     time: 0,
+    hasFlashlight: false,
+    battery: 100,
     player: { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 },
     keys: {},
     anomalies: [],
     rift: { x: 8.5, y: 1.5, active: false },
+    locker: { x: 3.5, y: 3.5, active: false },
     cassette: { x: 13.5, y: 14.5, active: false },
     msgT: 0
   };
@@ -189,6 +206,8 @@
     state.level = 1;
     state.sanity = 100;
     state.found = 0;
+    state.hasFlashlight = false;
+    state.battery = 100;
     state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [
       { x: 2.5, y: 1.5, name: 'Лампа без источника', found: false },
@@ -198,8 +217,11 @@
       { x: 5.5, y: 4.5, name: 'Дверь в никуда', found: false }
     ];
     state.rift.active = false;
+    state.locker.active = false;
     state.cassette.active = false;
     elFound.style.display = 'inline';
+    elInventory.style.display = 'none';
+    elInvFlashlight.style.display = 'none';
     elObjective.textContent = 'СОБЕРИ 5 АНОМАЛИЙ';
   }
 
@@ -210,10 +232,11 @@
     state.player = { x: 1.5, y: 1.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [];
     state.rift.active = false;
+    state.locker = { x: 3.5, y: 3.5, active: true }; // Шкаф
     state.cassette = { x: 13.5, y: 14.5, active: true };
     elFound.style.display = 'none';
     elObjective.textContent = 'НАЙДИ КАССЕТУ';
-    say('Уровень 2. Найди кассету.', 5);
+    say('Уровень 2. Доктор сказал про шкаф...', 5);
   }
 
   function collide(nx, ny) {
@@ -267,7 +290,6 @@
     elCassetteText.textContent = '';
     elContinueBtn.style.display = 'none';
     
-    // Запускаем аудио
     audio.currentTime = 0;
     audio.play().catch(e => console.log("Браузер заблокировал звук:", e));
 
@@ -310,8 +332,19 @@
       if (!collide(p.x, ny)) p.y = ny;
     }
 
+    // Рассудок и батарейка
     let decay = state.level === 1 ? 0.6 : 1.2;
     if (sprint) decay += 1.8;
+
+    // Логика батарейки
+    if (state.hasFlashlight && state.battery > 0) {
+      state.battery -= 0.5 * dt; // Садится батарейка
+      if (state.battery < 0) state.battery = 0;
+      elBatteryLevel.textContent = Math.floor(state.battery);
+      if (state.battery === 0) say('Фонарик погас...', 3);
+    } else if (state.hasFlashlight && state.battery <= 0) {
+      decay += 2.0; // В темноте без фонарика рассудок падает быстрее
+    }
     
     if (state.level === 1) {
       for (let i = 0; i < state.anomalies.length; i++) {
@@ -348,6 +381,29 @@
       }
     } 
     else if (state.level === 2) {
+      // Взаимодействие со шкафом
+      if (state.locker.active) {
+        let lDist = Math.hypot(state.locker.x - p.x, state.locker.y - p.y);
+        if (lDist < 1.5) {
+          elRiftPrompt.textContent = '// открыть шкаф';
+          elRiftPrompt.style.opacity = 1;
+          if (k.e) {
+            k.e = false;
+            state.locker.active = false;
+            state.hasFlashlight = true;
+            state.battery = 100;
+            elInventory.style.display = 'block'; // Показываем инвентарь
+            elInvFlashlight.style.display = 'block'; // Показываем фонарик
+            elBatteryLevel.textContent = '100';
+            say('Вы взяли фонарик. Теперь найдите кассету.', 5);
+            elRiftPrompt.style.opacity = 0;
+          }
+        } else {
+          elRiftPrompt.style.opacity = 0;
+        }
+      }
+
+      // Взаимодействие с кассетой
       if (state.cassette.active) {
         let cDist = Math.hypot(state.cassette.x - p.x, state.cassette.y - p.y);
         if (cDist < 1.5) {
@@ -359,8 +415,10 @@
             playCassette(); 
           }
         } else {
-          elRiftPrompt.style.opacity = 0;
-          elRiftPrompt.textContent = '// начинаем путь';
+          if (!state.locker.active) {
+            elRiftPrompt.style.opacity = 0;
+            elRiftPrompt.textContent = '// начинаем путь';
+          }
         }
       }
     }
@@ -385,6 +443,7 @@
     const fov = Math.PI / 3;
     const focalLength = (vw / 2) / Math.tan(fov / 2);
 
+    // 3D Стены
     for (let x = 0; x < vw; x++) {
       let rayAngle = p.angle - fov/2 + (x / vw) * fov;
       let res = castRay(rayAngle);
@@ -397,6 +456,8 @@
       let drawStart = -wallHeight / 2 + vh / 2;
       
       let lightMod = state.level === 2 ? 0.6 : 1;
+      if (state.hasFlashlight && state.battery > 0 && state.level === 2) lightMod = 0.85;
+
       let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
       let c = res.side === 0 ? 45 : 30;
       
@@ -408,6 +469,7 @@
       ctx.fillRect(x, drawStart, 1, wallHeight);
     }
 
+    // Рендер Аномалий
     let sorted = state.anomalies.map(a => {
       let dx = a.x - p.x, dy = a.y - p.y;
       return { ...a, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
@@ -431,13 +493,13 @@
           grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
           ctx.fillStyle = grad;
           ctx.beginPath(); ctx.arc(screenX, cy, size/2, 0, Math.PI*2); ctx.fill();
-          
           ctx.fillStyle = '#e0ffff';
           ctx.beginPath(); ctx.arc(screenX, cy, Math.max(2, size/20), 0, Math.PI*2); ctx.fill();
         }
       }
     }
 
+    // РЕНДЕР ТРЕЩИНЫ (Восстановлен!)
     if (state.level === 1 && state.rift.active) {
       let dx = state.rift.x - p.x, dy = state.rift.y - p.y;
       let dist = Math.hypot(dx, dy);
@@ -460,10 +522,43 @@
           grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
           ctx.fillStyle = grad;
           ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
+          
+          // Белая сердцевина
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(screenX - size/30, cy - h/3, size/15, h/1.5);
         }
       }
     }
 
+    // Рендер Шкафа (2 уровень)
+    if (state.level === 2 && state.locker.active) {
+      let dx = state.locker.x - p.x, dy = state.locker.y - p.y;
+      let dist = Math.hypot(dx, dy);
+      let angle = Math.atan2(dy, dx);
+      let angleDiff = angle - p.angle;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+      if (Math.abs(angleDiff) < fov / 2 + 0.5) {
+        let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
+        let size = focalLength / dist;
+        let rayToObj = castRay(angle);
+        
+        if (rayToObj.dist > dist) {
+          let cy = vh / 2;
+          let h = size * 1.2;
+          ctx.fillStyle = '#4a3b2a';
+          ctx.fillRect(screenX - size/6, cy - h/2, size/3, h);
+          ctx.fillStyle = '#2a1f15';
+          ctx.fillRect(screenX - size/8, cy - h/3, size/4, h/1.5);
+          // Ручка
+          ctx.fillStyle = '#d4af37';
+          ctx.fillRect(screenX + size/20, cy, size/30, size/30);
+        }
+      }
+    }
+
+    // Рендер Кассеты (2 уровень)
     if (state.level === 2 && state.cassette.active) {
       let dx = state.cassette.x - p.x, dy = state.cassette.y - p.y;
       let dist = Math.hypot(dx, dy);
@@ -485,22 +580,31 @@
           ctx.fillStyle = grad;
           ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
           
-          ctx.fillStyle = '#222';
-          ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10);
-          ctx.fillStyle = '#ffcc00';
-          ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
+          ctx.fillStyle = '#222'; ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10);
+          ctx.fillStyle = '#ffcc00'; ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
         }
       }
     }
 
+    // --- ЭФФЕКТ ФОНАРИКА (Уровень 2) ---
     if (state.level === 2) {
-      let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*0.1, vw/2, vh/2, Math.max(vw,vh)*0.6);
+      let radius = 0.02; // Очень маленький радиус (почти ничего не видно)
+      let darkness = 0.99; // Почти полная тьма
+      
+      // Если есть фонарик и батарейка не села
+      if (state.hasFlashlight && state.battery > 0) {
+        radius = 0.35; // Большой радиус света
+        darkness = 0.85; // Светлее
+      }
+
+      let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*radius, vw/2, vh/2, Math.max(vw,vh)*0.7);
       flGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      flGrad.addColorStop(0.6, 'rgba(0,0,0,0.7)');
-      flGrad.addColorStop(1, 'rgba(0,0,0,0.95)');
+      flGrad.addColorStop(0.5, `rgba(0,0,0,${darkness * 0.9})`);
+      flGrad.addColorStop(1, `rgba(0,0,0,${darkness})`);
       ctx.fillStyle = flGrad;
       ctx.fillRect(0,0,vw,vh);
 
+      // Синий туман
       let fogHeight = vh * 0.4;
       let fogOffset = Math.sin(state.time * 2) * 20;
       let fogGrad = ctx.createLinearGradient(0, vh - fogHeight + fogOffset, 0, vh);
@@ -511,6 +615,7 @@
       ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
     }
 
+    // --- МИНИ-КАРТА ---
     const cell = 12; 
     const mapW = currentMap[0].length * cell;
     const mapH = currentMap.length * cell;
@@ -532,37 +637,31 @@
     for (let a of state.anomalies) {
       if (a.found) continue;
       ctx.fillStyle = '#00bfff';
-      ctx.beginPath();
-      ctx.arc(ox + a.x*cell, oy + a.y*cell, 4, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(ox + a.x*cell, oy + a.y*cell, 4, 0, Math.PI*2); ctx.fill();
     }
 
     if (state.level === 1 && state.rift.active) {
       ctx.fillStyle = '#00ffff';
-      ctx.beginPath();
-      ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, 6, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, 6, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    }
+
+    if (state.level === 2 && state.locker.active) {
+      ctx.fillStyle = '#4a3b2a';
+      ctx.fillRect(ox + state.locker.x*cell - 4, oy + state.locker.y*cell - 4, 8, 8);
     }
 
     if (state.level === 2 && state.cassette.active) {
       ctx.fillStyle = '#ffcc00';
-      ctx.beginPath();
-      ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2); ctx.fill();
     }
 
     ctx.fillStyle = '#dcdcdc';
-    ctx.beginPath();
-    ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#dcdcdc';
-    ctx.beginPath();
-    ctx.moveTo(ox + p.x*cell, oy + p.y*cell);
-    ctx.lineTo(ox + (p.x + Math.cos(p.angle)*1.5)*cell, oy + (p.y + Math.sin(p.angle)*1.5)*cell);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox + p.x*cell, oy + p.y*cell); ctx.lineTo(ox + (p.x + Math.cos(p.angle)*1.5)*cell, oy + (p.y + Math.sin(p.angle)*1.5)*cell); ctx.stroke();
 
+    // Виньетка от рассудка
     let s = state.sanity / 100;
     if (s < 0.6) {
       let v = (0.6 - s) / 0.6;
@@ -591,7 +690,6 @@
     if (e.code === 'ArrowRight') state.keys.right = true;
     if (e.code === 'KeyE') state.keys.e = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = true;
-    
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
 
@@ -614,12 +712,8 @@
     }
   });
 
-  // Кнопка продолжения после прослушивания кассеты
   elContinueBtn.addEventListener('click', () => {
-    // Останавливаем аудио, если оно еще играет
-    audio.pause();
-    audio.currentTime = 0;
-    
+    audio.pause(); audio.currentTime = 0;
     elCassettePlayer.style.display = 'none';
     finish(true);
   });
