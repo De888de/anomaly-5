@@ -20,6 +20,7 @@
   #hud { position:absolute; left:16px; bottom:16px; z-index:7;
     font-size:14px; line-height:1.6; text-shadow:0 0 8px #000; }
   #found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
+  #objective { position:absolute; top:16px; left:16px; z-index:7; font-size:16px; color:#00bfff; text-shadow:0 0 10px #00bfff;}
   
   #subs { position:absolute; bottom:80px; left:0; right:0; text-align:center;
     z-index:8; font-size:17px; color:#e2e2e2; text-shadow:0 0 10px #000;
@@ -28,7 +29,17 @@
   #riftPrompt { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
     letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
-    
+
+  /* Интерфейс кассетного плеера */
+  #cassettePlayer { position:absolute; inset:0; z-index:14; background:rgba(0,0,0,0.95);
+    display:none; flex-direction:column; align-items:center; justify-content:center; padding:10vh 15vw; text-align:left; }
+  #cassettePlayer h3 { color:#ffcc00; letter-spacing:3px; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px; width:100%;}
+  #cassetteText { font-size:20px; line-height:1.8; color:#e0e0e0; min-height:150px; width:100%; white-space:pre-wrap; }
+  #continueBtn { margin-top:40px; display:none; background:none; border:1px solid #ffcc00;
+    color:#ffcc00; padding:12px 34px; font-family:inherit; font-size:16px;
+    letter-spacing:3px; cursor:pointer; transition: 0.3s; align-self: flex-start; }
+  #continueBtn:hover { background:#ffcc00; color:#000; }
+
   #title { position:absolute; inset:0; z-index:12;
     background:#000; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center; padding:30px; }
@@ -53,16 +64,26 @@
 </head>
 <body>
 <div id="app">
+  <!-- Подключаем аудиофайл -->
+  <audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
+
   <canvas id="cv"></canvas>
   <div id="vhs"></div>
   <div id="grain"></div>
   <div id="riftPrompt">// начинаем путь</div>
 
+  <div id="objective">СОБЕРИ 5 АНОМАЛИЙ</div>
   <div id="hud">
     РАССУДОК: <span id="sanity">100</span>%<br>
     АНОМАЛИИ: <span id="found">0</span> / 5
   </div>
   <div id="subs"></div>
+
+  <div id="cassettePlayer">
+    <h3>■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ...</h3>
+    <div id="cassetteText"></div>
+    <button id="continueBtn">ПРОДОЛЖИТЬ</button>
+  </div>
 
   <div id="title">
     <h1>CONNECT 5</h1>
@@ -70,7 +91,7 @@
     <p class="story">
       Ты — оператор выездной группы.<br><br>
       Стрелки — движение · Мышь — поворот камеры<br>
-      SHIFT — бег · E — зафиксировать аномалию
+      SHIFT — бег · E — взаимодействие
     </p>
     <button id="startBtn">НАЧАТЬ</button>
   </div>
@@ -89,14 +110,20 @@
   const ctx = cv.getContext('2d');
   const elSanity = document.getElementById('sanity');
   const elFound = document.getElementById('found');
+  const elObjective = document.getElementById('objective');
   const elSubs = document.getElementById('subs');
   const elTitle = document.getElementById('title');
   const elEnd = document.getElementById('end');
   const elEndTitle = document.getElementById('endTitle');
   const elEndText = document.getElementById('endText');
   const elRiftPrompt = document.getElementById('riftPrompt');
+  
+  const elCassettePlayer = document.getElementById('cassettePlayer');
+  const elCassetteText = document.getElementById('cassetteText');
+  const elContinueBtn = document.getElementById('continueBtn');
+  const audio = document.getElementById('cassetteAudio');
 
-  const map = [
+  const map1 = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,1,1,0,0,0,0,0,0,0,1,1,1,0,1],
@@ -115,8 +142,30 @@
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
   ];
 
+  const map2 = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,1,0,1,0,1,1,1,0,1,0,1,1,0,1],
+    [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,1],
+    [1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,1,0,1],
+    [1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,1,1,1,0,1,1,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+    [1,0,1,1,1,1,1,1,1,0,1,1,1,1,0,1],
+    [1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,1,0,1,1,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  ];
+
+  let currentMap = map1;
+
   const state = {
     running: false,
+    level: 1,
     sanity: 100,
     found: 0,
     time: 0,
@@ -124,6 +173,7 @@
     keys: {},
     anomalies: [],
     rift: { x: 8.5, y: 1.5, active: false },
+    cassette: { x: 13.5, y: 14.5, active: false },
     msgT: 0
   };
 
@@ -134,8 +184,12 @@
   window.addEventListener('resize', resize);
   resize();
 
-  function buildWorld() {
-    // Исправлены координаты, чтобы точно не было в стенах
+  function buildLevel1() {
+    currentMap = map1;
+    state.level = 1;
+    state.sanity = 100;
+    state.found = 0;
+    state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [
       { x: 2.5, y: 1.5, name: 'Лампа без источника', found: false },
       { x: 1.5, y: 5.5, name: 'Отражение без тела', found: false },
@@ -143,14 +197,31 @@
       { x: 14.5, y: 14.5, name: 'Тень под потолком', found: false },
       { x: 5.5, y: 4.5, name: 'Дверь в никуда', found: false }
     ];
+    state.rift.active = false;
+    state.cassette.active = false;
+    elFound.style.display = 'inline';
+    elObjective.textContent = 'СОБЕРИ 5 АНОМАЛИЙ';
+  }
+
+  function buildLevel2() {
+    currentMap = map2;
+    state.level = 2;
+    state.sanity = 100;
+    state.player = { x: 1.5, y: 1.5, angle: 0, speed: 3.5, r: 0.2 };
+    state.anomalies = [];
+    state.rift.active = false;
+    state.cassette = { x: 13.5, y: 14.5, active: true };
+    elFound.style.display = 'none';
+    elObjective.textContent = 'НАЙДИ КАССЕТУ';
+    say('Уровень 2. Найди кассету.', 5);
   }
 
   function collide(nx, ny) {
     let r = state.player.r;
-    if (map[Math.floor(ny - r)]?.[Math.floor(nx - r)] === 1) return true;
-    if (map[Math.floor(ny - r)]?.[Math.floor(nx + r)] === 1) return true;
-    if (map[Math.floor(ny + r)]?.[Math.floor(nx - r)] === 1) return true;
-    if (map[Math.floor(ny + r)]?.[Math.floor(nx + r)] === 1) return true;
+    if (currentMap[Math.floor(ny - r)]?.[Math.floor(nx - r)] === 1) return true;
+    if (currentMap[Math.floor(ny - r)]?.[Math.floor(nx + r)] === 1) return true;
+    if (currentMap[Math.floor(ny + r)]?.[Math.floor(nx - r)] === 1) return true;
+    if (currentMap[Math.floor(ny + r)]?.[Math.floor(nx + r)] === 1) return true;
     return false;
   }
 
@@ -178,11 +249,39 @@
     while (hit === 0 && maxSteps > 0) {
       if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
       else { sideDistY += deltaDistY; mapY += stepY; side = 1; }
-      if (map[mapY] && map[mapY][mapX] === 1) hit = 1;
+      if (currentMap[mapY] && currentMap[mapY][mapX] === 1) hit = 1;
       maxSteps--;
     }
     let dist = side === 0 ? (sideDistX - deltaDistX) : (sideDistY - deltaDistY);
     return { dist: dist, side: side };
+  }
+
+  let typeTimer;
+  const cassetteMessage = "Привет. Это доктор Пробикин. Очень здорово, что ты добрался до этого места. Подойди до шкафа, там ты найдешь фонарик и карту шлюзов. Дальнейшие указания будут там же. Береги рассудок.";
+
+  function playCassette() {
+    state.running = false;
+    document.exitPointerLock();
+    elRiftPrompt.style.opacity = 0;
+    elCassettePlayer.style.display = 'flex';
+    elCassetteText.textContent = '';
+    elContinueBtn.style.display = 'none';
+    
+    // Запускаем аудио
+    audio.currentTime = 0;
+    audio.play().catch(e => console.log("Браузер заблокировал звук:", e));
+
+    let i = 0;
+    clearInterval(typeTimer);
+    typeTimer = setInterval(() => {
+      if (i < cassetteMessage.length) {
+        elCassetteText.textContent += cassetteMessage.charAt(i);
+        i++;
+      } else {
+        clearInterval(typeTimer);
+        elContinueBtn.style.display = 'block';
+      }
+    }, 40);
   }
 
   function update(dt) {
@@ -211,38 +310,58 @@
       if (!collide(p.x, ny)) p.y = ny;
     }
 
-    // Рассудок
-    let decay = 0.6;
+    let decay = state.level === 1 ? 0.6 : 1.2;
     if (sprint) decay += 1.8;
     
-    for (let i = 0; i < state.anomalies.length; i++) {
-      let a = state.anomalies[i];
-      if (a.found) continue;
-      let dist = Math.hypot(a.x - p.x, a.y - p.y);
-      if (dist < 3) decay += (3 - dist) * 2.0;
-      
-      // Радиус сбора увеличен до 1.5, чтобы точно срабатывало
-      if (dist < 1.5 && k.e) {
-        a.found = true;
-        state.found++;
-        elFound.textContent = state.found;
-        say('Зафиксировано: ' + a.name, 3);
-        state.sanity = Math.min(100, state.sanity + 6);
+    if (state.level === 1) {
+      for (let i = 0; i < state.anomalies.length; i++) {
+        let a = state.anomalies[i];
+        if (a.found) continue;
+        let dist = Math.hypot(a.x - p.x, a.y - p.y);
+        if (dist < 3) decay += (3 - dist) * 2.0;
         
-        if (state.found === 5) {
-          state.rift.active = true;
-          say('Связь установлена. Трещина открыта.', 5);
+        if (dist < 1.5 && k.e) {
+          a.found = true;
+          state.found++;
+          elFound.textContent = state.found;
+          say('Зафиксировано: ' + a.name, 3);
+          state.sanity = Math.min(100, state.sanity + 6);
+          
+          if (state.found === 5) {
+            state.rift.active = true;
+            say('Связь установлена. Трещина открыта.', 5);
+          }
         }
       }
-    }
 
-    // Проверка трещины
-    if (state.rift.active) {
-      let rDist = Math.hypot(state.rift.x - p.x, state.rift.y - p.y);
-      if (rDist < 1.5) {
-        elRiftPrompt.style.opacity = 1;
-      } else {
-        elRiftPrompt.style.opacity = 0;
+      if (state.rift.active) {
+        let rDist = Math.hypot(state.rift.x - p.x, state.rift.y - p.y);
+        if (rDist < 1.5) {
+          elRiftPrompt.style.opacity = 1;
+          if (k.e) {
+            k.e = false;
+            buildLevel2();
+          }
+        } else {
+          elRiftPrompt.style.opacity = 0;
+        }
+      }
+    } 
+    else if (state.level === 2) {
+      if (state.cassette.active) {
+        let cDist = Math.hypot(state.cassette.x - p.x, state.cassette.y - p.y);
+        if (cDist < 1.5) {
+          elRiftPrompt.textContent = '// взять кассету';
+          elRiftPrompt.style.opacity = 1;
+          if (k.e) {
+            k.e = false;
+            state.cassette.active = false;
+            playCassette(); 
+          }
+        } else {
+          elRiftPrompt.style.opacity = 0;
+          elRiftPrompt.textContent = '// начинаем путь';
+        }
       }
     }
 
@@ -277,13 +396,18 @@
       let wallHeight = focalLength / dist;
       let drawStart = -wallHeight / 2 + vh / 2;
       
-      let shade = Math.max(0.1, 1 - dist / 15);
+      let lightMod = state.level === 2 ? 0.6 : 1;
+      let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
       let c = res.side === 0 ? 45 : 30;
-      ctx.fillStyle = `rgb(${c*shade}, ${c*shade}, ${c*shade+10})`;
+      
+      if (state.level === 2) {
+        ctx.fillStyle = `rgb(${c*shade*0.8}, ${c*shade*0.9}, ${c*shade*1.2})`;
+      } else {
+        ctx.fillStyle = `rgb(${c*shade}, ${c*shade}, ${c*shade+10})`;
+      }
       ctx.fillRect(x, drawStart, 1, wallHeight);
     }
 
-    // Рендер аномалий (СИНИЕ)
     let sorted = state.anomalies.map(a => {
       let dx = a.x - p.x, dy = a.y - p.y;
       return { ...a, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
@@ -298,8 +422,8 @@
       if (Math.abs(angleDiff) < fov / 2 + 0.3) {
         let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
         let size = focalLength / a.dist;
-        
         let rayToAnom = castRay(a.angle);
+        
         if (rayToAnom.dist > a.dist) {
           let cy = vh / 2;
           let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/2);
@@ -314,8 +438,7 @@
       }
     }
 
-    // Рендер Трещины
-    if (state.rift.active) {
+    if (state.level === 1 && state.rift.active) {
       let dx = state.rift.x - p.x, dy = state.rift.y - p.y;
       let dist = Math.hypot(dx, dy);
       let angle = Math.atan2(dy, dx);
@@ -330,42 +453,82 @@
         
         if (rayToRift.dist > dist) {
           let cy = vh / 2;
-          let h = size * 1.5; // Высота трещины
-          
+          let h = size * 1.5;
           let grad = ctx.createLinearGradient(screenX, cy - h/2, screenX, cy + h/2);
           grad.addColorStop(0, 'rgba(0, 191, 255, 0)');
           grad.addColorStop(0.5, 'rgba(0, 191, 255, 0.9)');
           grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
-          
           ctx.fillStyle = grad;
           ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
-          
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(screenX - size/40, cy - h/3, size/20, h/1.5);
         }
       }
     }
 
-    // --- МИНИ-КАРТА ---
+    if (state.level === 2 && state.cassette.active) {
+      let dx = state.cassette.x - p.x, dy = state.cassette.y - p.y;
+      let dist = Math.hypot(dx, dy);
+      let angle = Math.atan2(dy, dx);
+      let angleDiff = angle - p.angle;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+      if (Math.abs(angleDiff) < fov / 2 + 0.5) {
+        let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
+        let size = focalLength / dist;
+        let rayToCas = castRay(angle);
+        
+        if (rayToCas.dist > dist) {
+          let cy = vh / 2 + 10;
+          let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/3);
+          grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+          grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
+          
+          ctx.fillStyle = '#222';
+          ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10);
+          ctx.fillStyle = '#ffcc00';
+          ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
+        }
+      }
+    }
+
+    if (state.level === 2) {
+      let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*0.1, vw/2, vh/2, Math.max(vw,vh)*0.6);
+      flGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      flGrad.addColorStop(0.6, 'rgba(0,0,0,0.7)');
+      flGrad.addColorStop(1, 'rgba(0,0,0,0.95)');
+      ctx.fillStyle = flGrad;
+      ctx.fillRect(0,0,vw,vh);
+
+      let fogHeight = vh * 0.4;
+      let fogOffset = Math.sin(state.time * 2) * 20;
+      let fogGrad = ctx.createLinearGradient(0, vh - fogHeight + fogOffset, 0, vh);
+      fogGrad.addColorStop(0, 'rgba(0, 50, 150, 0)');
+      fogGrad.addColorStop(0.5, 'rgba(0, 100, 200, 0.3)');
+      fogGrad.addColorStop(1, 'rgba(0, 150, 255, 0.6)');
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
+    }
+
     const cell = 12; 
-    const mapW = map[0].length * cell;
-    const mapH = map.length * cell;
+    const mapW = currentMap[0].length * cell;
+    const mapH = currentMap.length * cell;
     const ox = vw - mapW - 20;
     const oy = 20;
 
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
     ctx.fillRect(ox, oy, mapW, mapH);
 
-    for (let y = 0; y < map.length; y++) {
-      for (let x = 0; x < map[y].length; x++) {
-        if (map[y][x] === 1) {
+    for (let y = 0; y < currentMap.length; y++) {
+      for (let x = 0; x < currentMap[y].length; x++) {
+        if (currentMap[y][x] === 1) {
           ctx.fillStyle = '#2a2a30';
           ctx.fillRect(ox + x*cell, oy + y*cell, cell, cell);
         }
       }
     }
 
-    // Точки аномалий (синие)
     for (let a of state.anomalies) {
       if (a.found) continue;
       ctx.fillStyle = '#00bfff';
@@ -374,8 +537,7 @@
       ctx.fill();
     }
 
-    // Трещина на карте
-    if (state.rift.active) {
+    if (state.level === 1 && state.rift.active) {
       ctx.fillStyle = '#00ffff';
       ctx.beginPath();
       ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, 6, 0, Math.PI*2);
@@ -384,7 +546,13 @@
       ctx.stroke();
     }
 
-    // Игрок
+    if (state.level === 2 && state.cassette.active) {
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath();
+      ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
     ctx.fillStyle = '#dcdcdc';
     ctx.beginPath();
     ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2);
@@ -395,7 +563,6 @@
     ctx.lineTo(ox + (p.x + Math.cos(p.angle)*1.5)*cell, oy + (p.y + Math.sin(p.angle)*1.5)*cell);
     ctx.stroke();
 
-    // Виньетка
     let s = state.sanity / 100;
     if (s < 0.6) {
       let v = (0.6 - s) / 0.6;
@@ -447,14 +614,20 @@
     }
   });
 
+  // Кнопка продолжения после прослушивания кассеты
+  elContinueBtn.addEventListener('click', () => {
+    // Останавливаем аудио, если оно еще играет
+    audio.pause();
+    audio.currentTime = 0;
+    
+    elCassettePlayer.style.display = 'none';
+    finish(true);
+  });
+
   function startGame() {
-    buildWorld();
-    state.sanity = 100;
-    state.found = 0;
+    buildLevel1();
     state.time = 0;
-    state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.keys = {};
-    state.rift.active = false;
     elRiftPrompt.style.opacity = 0;
     elSanity.textContent = '100';
     elFound.textContent = '0';
@@ -462,6 +635,8 @@
     state.msgT = 5;
     elTitle.style.display = 'none';
     elEnd.style.display = 'none';
+    elCassettePlayer.style.display = 'none';
+    audio.pause();
     state.running = true;
   }
 
@@ -469,8 +644,8 @@
     state.running = false;
     document.exitPointerLock();
     elEnd.style.display = 'flex';
-    elEndTitle.textContent = win ? 'ЗАФИКСИРОВАНО' : 'ПОТЕРЯ РАССУДКА';
-    elEndText.textContent = win ? 'Все аномалии отмечены.' : 'Ты не успел. Реальность растворилась.';
+    elEndTitle.textContent = win ? 'КАССЕТА НАЙДЕНА' : 'ПОТЕРЯ РАССУДКА';
+    elEndText.textContent = win ? 'Запись восстановлена. Путь продолжается.' : 'Ты не успел. Реальность растворилась.';
   }
 
   document.getElementById('startBtn').addEventListener('click', startGame);
