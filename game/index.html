@@ -19,9 +19,15 @@
   
   #hud { position:absolute; left:16px; bottom:16px; z-index:7;
     font-size:14px; line-height:1.6; text-shadow:0 0 8px #000; }
+  #found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
+  
   #subs { position:absolute; bottom:80px; left:0; right:0; text-align:center;
     z-index:8; font-size:17px; color:#e2e2e2; text-shadow:0 0 10px #000;
     padding:0 40px; line-height:1.5; }
+
+  #riftPrompt { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
+    letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
     
   #title { position:absolute; inset:0; z-index:12;
     background:#000; display:flex; flex-direction:column;
@@ -32,7 +38,7 @@
   #title button { margin-top:38px; background:none; border:1px solid #555;
     color:#cfcfcf; padding:14px 42px; font-family:inherit; font-size:16px;
     letter-spacing:4px; cursor:pointer; transition:.25s; }
-  #title button:hover { background:#1a1a1a; border-color:#b03a3a; color:#fff; }
+  #title button:hover { background:#1a1a1a; border-color:#00bfff; color:#fff; }
 
   #end { position:absolute; inset:0; z-index:15; display:none;
     background:#000; flex-direction:column; align-items:center;
@@ -42,7 +48,7 @@
   #end button { margin-top:36px; background:none; border:1px solid #444;
     color:#aaa; padding:12px 34px; font-family:inherit; font-size:14px;
     letter-spacing:3px; cursor:pointer; }
-  #end button:hover { background:#151515; color:#fff; border-color:#b03a3a; }
+  #end button:hover { background:#151515; color:#fff; border-color:#00bfff; }
 </style>
 </head>
 <body>
@@ -50,6 +56,7 @@
   <canvas id="cv"></canvas>
   <div id="vhs"></div>
   <div id="grain"></div>
+  <div id="riftPrompt">// начинаем путь</div>
 
   <div id="hud">
     РАССУДОК: <span id="sanity">100</span>%<br>
@@ -87,6 +94,7 @@
   const elEnd = document.getElementById('end');
   const elEndTitle = document.getElementById('endTitle');
   const elEndText = document.getElementById('endText');
+  const elRiftPrompt = document.getElementById('riftPrompt');
 
   const map = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -115,6 +123,7 @@
     player: { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 },
     keys: {},
     anomalies: [],
+    rift: { x: 8.5, y: 1.5, active: false },
     msgT: 0
   };
 
@@ -126,12 +135,13 @@
   resize();
 
   function buildWorld() {
+    // Исправлены координаты, чтобы точно не было в стенах
     state.anomalies = [
       { x: 2.5, y: 1.5, name: 'Лампа без источника', found: false },
       { x: 1.5, y: 5.5, name: 'Отражение без тела', found: false },
-      { x: 13.5, y: 5.5, name: 'Часы идущие назад', found: false },
+      { x: 14.5, y: 5.5, name: 'Часы идущие назад', found: false },
       { x: 14.5, y: 14.5, name: 'Тень под потолком', found: false },
-      { x: 8.5, y: 4.5, name: 'Дверь в никуда', found: false }
+      { x: 5.5, y: 4.5, name: 'Дверь в никуда', found: false }
     ];
   }
 
@@ -185,10 +195,8 @@
     let moveSpeed = p.speed * dt * (sprint ? 1.8 : 1);
 
     let dx = 0, dy = 0;
-    // Движение вперед/назад
     if (k.up) { dx += Math.cos(p.angle); dy += Math.sin(p.angle); }
     if (k.down) { dx -= Math.cos(p.angle); dy -= Math.sin(p.angle); }
-    // Стрэйф влево/вправо
     if (k.left) { dx += Math.cos(p.angle - Math.PI/2); dy += Math.sin(p.angle - Math.PI/2); }
     if (k.right) { dx += Math.cos(p.angle + Math.PI/2); dy += Math.sin(p.angle + Math.PI/2); }
 
@@ -199,7 +207,6 @@
       
       let nx = p.x + dx;
       let ny = p.y + dy;
-      // Раздельная проверка осей для скольжения вдоль стен
       if (!collide(nx, p.y)) p.x = nx;
       if (!collide(p.x, ny)) p.y = ny;
     }
@@ -214,20 +221,32 @@
       let dist = Math.hypot(a.x - p.x, a.y - p.y);
       if (dist < 3) decay += (3 - dist) * 2.0;
       
-      // Взаимодействие на 'E'
-      if (dist < 1.2 && k.e) {
+      // Радиус сбора увеличен до 1.5, чтобы точно срабатывало
+      if (dist < 1.5 && k.e) {
         a.found = true;
         state.found++;
         elFound.textContent = state.found;
         say('Зафиксировано: ' + a.name, 3);
         state.sanity = Math.min(100, state.sanity + 6);
-        k.e = false;
+        
+        if (state.found === 5) {
+          state.rift.active = true;
+          say('Связь установлена. Трещина открыта.', 5);
+        }
+      }
+    }
+
+    // Проверка трещины
+    if (state.rift.active) {
+      let rDist = Math.hypot(state.rift.x - p.x, state.rift.y - p.y);
+      if (rDist < 1.5) {
+        elRiftPrompt.style.opacity = 1;
+      } else {
+        elRiftPrompt.style.opacity = 0;
       }
     }
 
     state.sanity = Math.max(0, state.sanity - decay * dt);
-    
-    if (state.found >= 5) return finish(true);
     if (state.sanity <= 0) return finish(false);
 
     if (state.msgT > 0) {
@@ -264,6 +283,7 @@
       ctx.fillRect(x, drawStart, 1, wallHeight);
     }
 
+    // Рендер аномалий (СИНИЕ)
     let sorted = state.anomalies.map(a => {
       let dx = a.x - p.x, dy = a.y - p.y;
       return { ...a, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
@@ -282,14 +302,46 @@
         let rayToAnom = castRay(a.angle);
         if (rayToAnom.dist > a.dist) {
           let cy = vh / 2;
-          let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/3);
-          grad.addColorStop(0, 'rgba(180, 58, 58, 0.9)');
-          grad.addColorStop(1, 'rgba(180, 58, 58, 0)');
+          let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/2);
+          grad.addColorStop(0, 'rgba(0, 191, 255, 0.9)');
+          grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
           ctx.fillStyle = grad;
-          ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(screenX, cy, size/2, 0, Math.PI*2); ctx.fill();
           
-          ctx.fillStyle = '#e84040';
-          ctx.beginPath(); ctx.arc(screenX, cy, Math.max(2, size/15), 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = '#e0ffff';
+          ctx.beginPath(); ctx.arc(screenX, cy, Math.max(2, size/20), 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+
+    // Рендер Трещины
+    if (state.rift.active) {
+      let dx = state.rift.x - p.x, dy = state.rift.y - p.y;
+      let dist = Math.hypot(dx, dy);
+      let angle = Math.atan2(dy, dx);
+      let angleDiff = angle - p.angle;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+      if (Math.abs(angleDiff) < fov / 2 + 0.5) {
+        let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
+        let size = focalLength / dist;
+        let rayToRift = castRay(angle);
+        
+        if (rayToRift.dist > dist) {
+          let cy = vh / 2;
+          let h = size * 1.5; // Высота трещины
+          
+          let grad = ctx.createLinearGradient(screenX, cy - h/2, screenX, cy + h/2);
+          grad.addColorStop(0, 'rgba(0, 191, 255, 0)');
+          grad.addColorStop(0.5, 'rgba(0, 191, 255, 0.9)');
+          grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
+          
+          ctx.fillStyle = grad;
+          ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(screenX - size/40, cy - h/3, size/20, h/1.5);
         }
       }
     }
@@ -313,15 +365,26 @@
       }
     }
 
+    // Точки аномалий (синие)
     for (let a of state.anomalies) {
       if (a.found) continue;
-      ctx.fillStyle = '#b03a3a';
+      ctx.fillStyle = '#00bfff';
       ctx.beginPath();
       ctx.arc(ox + a.x*cell, oy + a.y*cell, 4, 0, Math.PI*2);
       ctx.fill();
     }
 
-    // Игрок (стрелка)
+    // Трещина на карте
+    if (state.rift.active) {
+      ctx.fillStyle = '#00ffff';
+      ctx.beginPath();
+      ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, 6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    }
+
+    // Игрок
     ctx.fillStyle = '#dcdcdc';
     ctx.beginPath();
     ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2);
@@ -354,9 +417,7 @@
   }
   requestAnimationFrame(loop);
 
-  // --- УПРАВЛЕНИЕ ---
   window.addEventListener('keydown', e => {
-    // Используем e.code для независимости от раскладки
     if (e.code === 'ArrowUp') state.keys.up = true;
     if (e.code === 'ArrowDown') state.keys.down = true;
     if (e.code === 'ArrowLeft') state.keys.left = true;
@@ -376,14 +437,13 @@
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = false;
   });
 
-  // Управление мышью
   cv.addEventListener('click', () => {
     if (state.running) cv.requestPointerLock();
   });
 
   document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement === cv) {
-      state.player.angle += e.movementX * 0.002; // Чувствительность мыши
+      state.player.angle += e.movementX * 0.002;
     }
   });
 
@@ -394,9 +454,11 @@
     state.time = 0;
     state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.keys = {};
+    state.rift.active = false;
+    elRiftPrompt.style.opacity = 0;
     elSanity.textContent = '100';
     elFound.textContent = '0';
-    elSubs.textContent = 'Кликни по экрану, чтобы захватить мышь. Стрелки - ходьба.';
+    elSubs.textContent = 'Кликни по экрану. Собери 5 аномалий (E).';
     state.msgT = 5;
     elTitle.style.display = 'none';
     elEnd.style.display = 'none';
@@ -405,7 +467,7 @@
 
   function finish(win) {
     state.running = false;
-    document.exitPointerLock(); // Отпускаем мышь
+    document.exitPointerLock();
     elEnd.style.display = 'flex';
     elEndTitle.textContent = win ? 'ЗАФИКСИРОВАНО' : 'ПОТЕРЯ РАССУДКА';
     elEndText.textContent = win ? 'Все аномалии отмечены.' : 'Ты не успел. Реальность растворилась.';
