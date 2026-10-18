@@ -34,7 +34,6 @@
     z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
     letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
 
-  /* КАССЕТНЫЙ ПЛЕЕР */
   #cassettePlayer { position:absolute; inset:0; z-index:14; background:rgba(0,0,0,0.95);
     display:none; flex-direction:column; align-items:center; justify-content:center; padding:10vh 15vw; text-align:left; }
   #cassettePlayer h3 { color:#ffcc00; letter-spacing:3px; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px; width:100%;}
@@ -44,7 +43,6 @@
     letter-spacing:3px; cursor:pointer; transition: 0.3s; align-self: flex-start; }
   #continueBtn:hover { background:#ffcc00; color:#000; }
 
-  /* КОДОВАЯ ПАНЕЛЬ */
   #keypadUI { position:absolute; inset:0; z-index:16; background:rgba(0,0,0,0.85);
     display:none; flex-direction:column; align-items:center; justify-content:center; }
   #keypadScreen { font-size:48px; letter-spacing:12px; color:#00ff00; text-shadow:0 0 20px #00ff00;
@@ -83,6 +81,7 @@
 <div id="app">
   <audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
   <audio id="cassetteAudio2" src="instructions_2.wav" preload="auto"></audio>
+  <audio id="cassetteAudio3" src="instructions_3.wav" preload="auto"></audio>
 
   <canvas id="cv"></canvas>
   <div id="vhs"></div>
@@ -97,7 +96,9 @@
     
     <div id="inventory">
       ИНВЕНТАРЬ:<br>
-      <div class="inv-item" id="invFlashlight" style="display:none;">🔦 ФОНАРИК (<span id="batteryLevel">100</span>%)</div>
+      <div class="inv-item" id="invFlashlight" style="display:none;">
+        🔦 ФОНАРИК [F] (<span id="flashlightStatus">ВКЛ</span> - <span id="batteryLevel">100</span>%)
+      </div>
       <div class="inv-item" id="invCassette" style="display:none; color: #00bfff;">📼 КАССЕТА 1</div>
       <div class="inv-item" id="invCassette2" style="display:none; color: #00bfff;">📼 КАССЕТА 2</div>
     </div>
@@ -111,7 +112,6 @@
     <button id="continueBtn">ПРОДОЛЖИТЬ</button>
   </div>
 
-  <!-- КОДОВАЯ ПАНЕЛЬ -->
   <div id="keypadUI">
     <div id="keypadScreen">_ _ _</div>
     <div class="keypad-grid">
@@ -135,8 +135,9 @@
     <h2>АНОМАЛИЯ</h2>
     <p class="story">
       Ты — оператор выездной группы.<br><br>
-      Стрелки — движение · Мышь — поворот камеры<br>
-      SHIFT — бег · E — взаимодействие
+      <b>W A S/X D</b> или <b>Стрелки</b> — движение<br>
+      Мышь — поворот камеры<br>
+      SHIFT — бег · E — взаимодействие · F — фонарик
     </p>
     <button id="startBtn">НАЧАТЬ</button>
   </div>
@@ -168,6 +169,7 @@
   const elInvCassette = document.getElementById('invCassette');
   const elInvCassette2 = document.getElementById('invCassette2');
   const elBatteryLevel = document.getElementById('batteryLevel');
+  const elFlashlightStatus = document.getElementById('flashlightStatus');
   
   const elCassettePlayer = document.getElementById('cassettePlayer');
   const elCassetteTitle = document.getElementById('cassetteTitle');
@@ -175,14 +177,16 @@
   const elContinueBtn = document.getElementById('continueBtn');
   const audio1 = document.getElementById('cassetteAudio');
   const audio2 = document.getElementById('cassetteAudio2');
+  const audio3 = document.getElementById('cassetteAudio3');
 
   const elKeypadUI = document.getElementById('keypadUI');
   const elKeypadScreen = document.getElementById('keypadScreen');
 
-  // --- ГЕНЕРАТОР ЗВУКОВ (Web Audio API) ---
+  // --- ГЕНЕРАТОР ЗВУКОВ ---
   let audioCtx = null;
   function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
   }
   
   function playTone(freq, type, duration, vol) {
@@ -309,9 +313,11 @@
     found: 0,
     time: 0,
     hasFlashlight: false,
+    isFlashlightOn: false, // НОВОЕ СВОЙСТВО
     hasCassette1: false,
     hasCassette2: false,
     gateActive: false,
+    cassette3Played: false,
     battery: 100,
     stepTimer: 0,
     player: { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 },
@@ -342,9 +348,11 @@
     state.sanity = 100;
     state.found = 0;
     state.hasFlashlight = false;
+    state.isFlashlightOn = false;
     state.hasCassette1 = false;
     state.hasCassette2 = false;
     state.gateActive = false;
+    state.cassette3Played = false;
     state.battery = 100;
     state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [
@@ -380,6 +388,7 @@
     state.cassette = { x: 11.5, y: 14.5, active: true };
     state.monster = { x: 0, y: 0, active: false, speed: 2.0 };
     state.gateActive = false;
+    state.cassette3Played = false;
     state.keypadActive = false;
     elKeypadUI.style.display = 'none';
     elFound.style.display = 'none';
@@ -388,6 +397,7 @@
   }
 
   function collide(nx, ny) {
+    if (isNaN(nx) || isNaN(ny)) return true; 
     let r = state.player.r;
     if (currentMap[Math.floor(ny - r)]?.[Math.floor(nx - r)] === 1) return true;
     if (currentMap[Math.floor(ny - r)]?.[Math.floor(nx + r)] === 1) return true;
@@ -404,6 +414,10 @@
   function castRay(rayAngle) {
     let rayDirX = Math.cos(rayAngle);
     let rayDirY = Math.sin(rayAngle);
+    
+    if (rayDirX === 0) rayDirX = 0.000001;
+    if (rayDirY === 0) rayDirY = 0.000001;
+
     let mapX = Math.floor(state.player.x);
     let mapY = Math.floor(state.player.y);
 
@@ -424,12 +438,14 @@
       maxSteps--;
     }
     let dist = side === 0 ? (sideDistX - deltaDistX) : (sideDistY - deltaDistY);
+    if (isNaN(dist) || dist === Infinity) dist = 50; 
     return { dist: dist, side: side };
   }
 
   let typeTimer;
   const cassetteMessage1 = "Привет. Это доктор Пробикин. Очень здорово, что ты добрался до этого места. Подойди до шкафа, там ты найдешь фонарик и карту шлюзов. Дальнейшие указания будут там же. Береги рассудок.";
   const cassetteMessage2 = "Слушай внимательно. Время на исходе. Рядом должен быть второй шкаф. Внутри — код от шлюзов. Они уже близко. Не оглядывайся, просто бери кассету и уходи.";
+  const cassetteMessage3 = "Отлично, ты нашел шлюз. Это последняя запись. Введи код 5-0-5 на панели, и дверь откроется. За ней — безопасная зона. Я жду тебя там. И пожалуйста, не оборачивайся.";
 
   function playCassette(type) {
     playClick();
@@ -452,6 +468,10 @@
       textToType = cassetteMessage2;
       state.currentAudio = audio2;
       elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 2...';
+    } else if (type === 3) {
+      textToType = cassetteMessage3;
+      state.currentAudio = audio3;
+      elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 3...';
     }
 
     if (state.currentAudio) {
@@ -514,6 +534,11 @@
 
   function update(dt) {
     if (!state.running) return;
+    
+    if (isNaN(state.player.angle)) state.player.angle = 0;
+    if (isNaN(state.player.x)) state.player.x = 8.5;
+    if (isNaN(state.player.y)) state.player.y = 8.5;
+    
     state.time += dt;
 
     let p = state.player, k = state.keys;
@@ -522,6 +547,7 @@
     let moveSpeed = p.speed * dt * (sprint ? 1.8 : 1);
 
     let dx = 0, dy = 0;
+    
     if (k.up) { dx += Math.cos(p.angle); dy += Math.sin(p.angle); }
     if (k.down) { dx -= Math.cos(p.angle); dy -= Math.sin(p.angle); }
     if (k.left) { dx += Math.cos(p.angle - Math.PI/2); dy += Math.sin(p.angle - Math.PI/2); }
@@ -536,13 +562,15 @@
       }
 
       let len = Math.hypot(dx, dy);
-      dx = (dx / len) * moveSpeed;
-      dy = (dy / len) * moveSpeed;
-      
-      let nx = p.x + dx;
-      let ny = p.y + dy;
-      if (!collide(nx, p.y)) p.x = nx;
-      if (!collide(p.x, ny)) p.y = ny;
+      if (len > 0) {
+        dx = (dx / len) * moveSpeed;
+        dy = (dy / len) * moveSpeed;
+        
+        let nx = p.x + dx;
+        let ny = p.y + dy;
+        if (!collide(nx, p.y)) p.x = nx;
+        if (!collide(p.x, ny)) p.y = ny;
+      }
     } else {
       state.stepTimer = 0;
     }
@@ -552,8 +580,10 @@
       let m = state.monster;
       let angleToPlayer = Math.atan2(p.y - m.y, p.x - m.x);
       
-      m.x += Math.cos(angleToPlayer) * m.speed * dt;
-      m.y += Math.sin(angleToPlayer) * m.speed * dt;
+      if (!isNaN(angleToPlayer)) {
+        m.x += Math.cos(angleToPlayer) * m.speed * dt;
+        m.y += Math.sin(angleToPlayer) * m.speed * dt;
+      }
 
       playMonsterGrowl();
 
@@ -567,13 +597,22 @@
     let decay = state.level === 1 ? 0.6 : 1.2;
     if (sprint) decay += 1.8;
 
-    if (state.hasFlashlight && state.battery > 0) {
-      state.battery -= 0.5 * dt;
-      if (state.battery < 0) state.battery = 0;
-      elBatteryLevel.textContent = Math.floor(state.battery);
-      if (state.battery === 0) say('Фонарик погас...', 3);
-    } else if (state.hasFlashlight && state.battery <= 0) {
-      decay += 2.0;
+    // ЛОГИКА БАТАРЕЙКИ (Тратится только если включен)
+    if (state.hasFlashlight) {
+      if (state.isFlashlightOn && state.battery > 0) {
+        state.battery -= 0.5 * dt;
+        if (state.battery <= 0) {
+          state.battery = 0;
+          state.isFlashlightOn = false;
+          elFlashlightStatus.textContent = 'ВЫКЛ';
+          say('Батарейка села...', 3);
+        }
+        elBatteryLevel.textContent = Math.floor(state.battery);
+      } else if (state.battery <= 0) {
+        decay += 2.0; // Если батарейка сдохла, а мы в темноте - страдаем
+      } else if (!state.isFlashlightOn) {
+        decay += 1.0; // В темноте без света страшнее
+      }
     }
     
     if (state.level === 1) {
@@ -625,10 +664,12 @@
             k.e = false;
             state.locker.active = false;
             state.hasFlashlight = true;
+            state.isFlashlightOn = true; // Включаем при взятии
             state.hasCassette2 = true;
             state.battery = 100;
             elInventory.style.display = 'block';
             elInvFlashlight.style.display = 'block';
+            elFlashlightStatus.textContent = 'ВКЛ';
             elInvCassette2.style.display = 'block';
             elBatteryLevel.textContent = '100';
             playCassette(2);
@@ -660,19 +701,27 @@
         }
       }
 
-      // ЛОГИКА ШЛЮЗА
       if (state.gateActive) {
         let gDist = Math.hypot(state.gate.x - p.x, state.gate.y - p.y);
         if (gDist < 2.0) {
-          elRiftPrompt.textContent = '// ВВЕДИТЕ КОД';
-          elRiftPrompt.style.opacity = 1;
-          if (k.e) {
-            k.e = false;
-            state.running = false; 
-            document.exitPointerLock(); 
-            elKeypadUI.style.display = 'flex';
-            state.keypadInput = "";
-            updateKeypadScreen();
+          if (!state.cassette3Played) {
+            elRiftPrompt.textContent = '// ПРОСЛУШАТЬ ЗАПИСЬ';
+            elRiftPrompt.style.opacity = 1;
+            if (k.e) {
+              k.e = false;
+              playCassette(3);
+            }
+          } else {
+            elRiftPrompt.textContent = '// ВВЕДИТЕ КОД';
+            elRiftPrompt.style.opacity = 1;
+            if (k.e) {
+              k.e = false;
+              state.running = false; 
+              document.exitPointerLock(); 
+              elKeypadUI.style.display = 'flex';
+              state.keypadInput = "";
+              updateKeypadScreen();
+            }
           }
         } else {
           elRiftPrompt.style.opacity = 0;
@@ -696,11 +745,15 @@
     const vw = cv.width, vh = cv.height;
     const p = state.player;
 
+    if (vw === 0 || vh === 0) return;
+
     ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, vw, vh / 2);
     ctx.fillStyle = '#111114'; ctx.fillRect(0, vh / 2, vw, vh / 2);
 
     const fov = Math.PI / 3;
     const focalLength = (vw / 2) / Math.tan(fov / 2);
+    
+    let isLightOn = state.hasFlashlight && state.isFlashlightOn && state.battery > 0;
 
     for (let x = 0; x < vw; x++) {
       let rayAngle = p.angle - fov/2 + (x / vw) * fov;
@@ -714,7 +767,7 @@
       let drawStart = -wallHeight / 2 + vh / 2;
       
       let lightMod = state.level === 2 ? 0.6 : 1;
-      if (state.hasFlashlight && state.battery > 0 && state.level === 2) lightMod = 0.85;
+      if (isLightOn && state.level === 2) lightMod = 0.85;
 
       let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
       let c = res.side === 0 ? 45 : 30;
@@ -851,7 +904,7 @@
       let radius = 0.02; 
       let darkness = 0.99; 
       
-      if (state.hasFlashlight && state.battery > 0) {
+      if (isLightOn) {
         radius = 1.05; 
         darkness = 0.65; 
       }
@@ -923,10 +976,17 @@
       ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, 6, 0, Math.PI*2); ctx.fill();
     }
 
-    ctx.fillStyle = '#dcdcdc';
-    ctx.beginPath(); ctx.arc(ox + p.x*cell, oy + p.y*cell, 4, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#dcdcdc';
-    ctx.beginPath(); ctx.moveTo(ox + p.x*cell, oy + p.y*cell); ctx.lineTo(ox + (p.x + Math.cos(p.angle)*1.5)*cell, oy + (p.y + Math.sin(p.angle)*1.5)*cell); ctx.stroke();
+    let pX = ox + p.x*cell;
+    let pY = oy + p.y*cell;
+    let lineX = ox + (p.x + Math.cos(p.angle)*1.5)*cell;
+    let lineY = oy + (p.y + Math.sin(p.angle)*1.5)*cell;
+
+    if (!isNaN(pX) && !isNaN(pY) && !isNaN(lineX) && !isNaN(lineY)) {
+      ctx.fillStyle = '#dcdcdc';
+      ctx.beginPath(); ctx.arc(pX, pY, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#dcdcdc';
+      ctx.beginPath(); ctx.moveTo(pX, pY); ctx.lineTo(lineX, lineY); ctx.stroke();
+    }
 
     let s = state.sanity / 100;
     if (s < 0.6) {
@@ -943,27 +1003,40 @@
   function loop(now) {
     let dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    update(dt);
-    render();
+    try {
+      update(dt);
+      render();
+    } catch (e) {
+      console.error("Ошибка рендера:", e);
+    }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
   window.addEventListener('keydown', e => {
-    if (e.code === 'ArrowUp') state.keys.up = true;
-    if (e.code === 'ArrowDown') state.keys.down = true;
-    if (e.code === 'ArrowLeft') state.keys.left = true;
-    if (e.code === 'ArrowRight') state.keys.right = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') state.keys.up = true;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyX') state.keys.down = true;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') state.keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') state.keys.right = true;
     if (e.code === 'KeyE') state.keys.e = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = true;
+    
+    // Включение/выключение фонарика
+    if (e.code === 'KeyF' && state.hasFlashlight && state.battery > 0) {
+      state.isFlashlightOn = !state.isFlashlightOn;
+      playClick();
+      elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ';
+      say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2);
+    }
+
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
 
   window.addEventListener('keyup', e => {
-    if (e.code === 'ArrowUp') state.keys.up = false;
-    if (e.code === 'ArrowDown') state.keys.down = false;
-    if (e.code === 'ArrowLeft') state.keys.left = false;
-    if (e.code === 'ArrowRight') state.keys.right = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') state.keys.up = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyX') state.keys.down = false;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') state.keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') state.keys.right = false;
     if (e.code === 'KeyE') state.keys.e = false;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = false;
   });
@@ -974,7 +1047,8 @@
 
   document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement === cv) {
-      state.player.angle += e.movementX * 0.002;
+      let move = e.movementX || 0;
+      state.player.angle += move * 0.002;
     }
   });
 
@@ -982,6 +1056,7 @@
     playClick();
     audio1.pause(); audio1.currentTime = 0;
     audio2.pause(); audio2.currentTime = 0;
+    audio3.pause(); audio3.currentTime = 0;
     elCassettePlayer.style.display = 'none';
     
     if (state.currentCassetteType === 1) {
@@ -989,13 +1064,18 @@
       cv.requestPointerLock();
       elObjective.textContent = 'НАЙДИ ШКАФ';
     } else if (state.currentCassetteType === 2) {
-      // АКТИВАЦИЯ ШЛЮЗА И МОНСТРА
       state.gateActive = true;
+      elObjective.textContent = 'НАЙДИ ШЛЮЗ';
+      say('Код у тебя. Найди зеленый шлюз.', 5);
+      state.running = true;
+      cv.requestPointerLock();
+    } else if (state.currentCassetteType === 3) {
+      state.cassette3Played = true;
       state.monster.active = true;
       state.monster.x = state.player.x - Math.cos(state.player.angle) * 6;
       state.monster.y = state.player.y - Math.sin(state.player.angle) * 6;
       
-      elObjective.textContent = 'БЕГИ К ШЛЮЗУ!';
+      elObjective.textContent = 'ВВЕДИ КОД!';
       say('Оно уже здесь! Вводи код!', 5);
       state.running = true;
       cv.requestPointerLock();
@@ -1006,9 +1086,10 @@
     playClick();
     initAudio();
 
-    audio1.volume = 0; audio2.volume = 0;
+    audio1.volume = 0; audio2.volume = 0; audio3.volume = 0;
     audio1.play().then(() => { audio1.pause(); audio1.currentTime = 0; audio1.volume = 1; }).catch(e => console.log(e));
     audio2.play().then(() => { audio2.pause(); audio2.currentTime = 0; audio2.volume = 1; }).catch(e => console.log(e));
+    audio3.play().then(() => { audio3.pause(); audio3.currentTime = 0; audio3.volume = 1; }).catch(e => console.log(e));
 
     buildLevel1();
     state.time = 0;
