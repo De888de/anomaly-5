@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>CONNECT 5 — Аномалия</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { height:100%; background:#000; overflow:hidden;
-    font-family:'Courier New',monospace; color:#c9c9c9; }
+    font-family:'Courier New',monospace; color:#c9c9c9; touch-action:none; }
   #app { position:relative; width:100%; height:100%; }
-  canvas { display:block; width:100%; height:100%; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
   #vhs { position:absolute; inset:0; pointer-events:none; z-index:5;
     background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px); mix-blend-mode:multiply; }
   #grain { position:absolute; inset:-50%; pointer-events:none; z-index:6; opacity:.07;
@@ -75,6 +75,38 @@
     color:#aaa; padding:12px 34px; font-family:inherit; font-size:14px;
     letter-spacing:3px; cursor:pointer; }
   #end button:hover { background:#151515; color:#fff; border-color:#00bfff; }
+
+  /* --- МОБИЛЬНОЕ УПРАВЛЕНИЕ --- */
+  #mobileControls { display: none; position: absolute; inset: 0; z-index: 25; pointer-events: none; }
+  body.mobile #mobileControls { display: block; }
+  
+  /* Крестовина (D-Pad) */
+  .dpad { position: absolute; bottom: 30px; left: 20px; width: 150px; height: 150px; pointer-events: auto; }
+  .dpad-btn { position: absolute; width: 50px; height: 50px; background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; user-select: none; -webkit-user-select: none; }
+  .dpad-btn:active { background: rgba(255,255,255,0.4); }
+  .dpad-up { top: 0; left: 50px; }
+  .dpad-down { bottom: 0; left: 50px; }
+  .dpad-left { top: 50px; left: 0; }
+  .dpad-right { top: 50px; right: 0; }
+
+  /* Кнопки действий */
+  .action-btns { position: absolute; bottom: 30px; right: 20px; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 15px; pointer-events: auto; }
+  .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff;
+    font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none; }
+  .action-btn:active { background: rgba(255,255,255,0.4); }
+  #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px;
+    background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff; font-size: 20px; }
+
+  /* Адаптация UI под мобилку */
+  body.mobile #subs { bottom: 200px; font-size: 14px; }
+  body.mobile #hud { font-size: 12px; left: 10px; bottom: 10px; }
+  body.mobile #objective { font-size: 14px; top: 10px; left: 10px; }
+  body.mobile #title .story { font-size: 12px; }
 </style>
 </head>
 <body>
@@ -97,7 +129,7 @@
     <div id="inventory">
       ИНВЕНТАРЬ:<br>
       <div class="inv-item" id="invFlashlight" style="display:none;">
-        🔦 ФОНАРИК [F] (<span id="flashlightStatus">ВКЛ</span> - <span id="batteryLevel">100</span>%)
+        🔦 ФОНАРИК (<span id="flashlightStatus">ВКЛ</span> - <span id="batteryLevel">100</span>%)
       </div>
       <div class="inv-item" id="invCassette" style="display:none; color: #00bfff;">📼 КАССЕТА 1</div>
       <div class="inv-item" id="invCassette2" style="display:none; color: #00bfff;">📼 КАССЕТА 2</div>
@@ -135,9 +167,8 @@
     <h2>АНОМАЛИЯ</h2>
     <p class="story">
       Ты — оператор выездной группы.<br><br>
-      <b>W A S/X D</b> или <b>Стрелки</b> — движение<br>
-      Мышь — поворот камеры<br>
-      SHIFT — бег · E — взаимодействие · F — фонарик
+      <span id="desktopControls"><b>W A S/X D</b> или <b>Стрелки</b> — движение · Мышь — камера<br>SHIFT — бег · E — взаимодействие · F — фонарик</span>
+      <span id="mobileControlsText" style="display:none;">Левая сторона — движение<br>Правая сторона — поворот камеры (свайп)<br>Кнопки справа — действия</span>
     </p>
     <button id="startBtn">НАЧАТЬ</button>
   </div>
@@ -147,6 +178,21 @@
     <p id="endText"></p>
     <button id="againBtn">СНАЧАЛА</button>
   </div>
+
+  <!-- МОБИЛЬНЫЕ КНОПКИ -->
+  <div id="mobileControls">
+    <div class="dpad">
+      <div class="dpad-btn dpad-up" id="btn-up">▲</div>
+      <div class="dpad-btn dpad-left" id="btn-left">◀</div>
+      <div class="dpad-btn dpad-down" id="btn-down">▼</div>
+      <div class="dpad-btn dpad-right" id="btn-right">▶</div>
+    </div>
+    <div class="action-btns">
+      <div class="action-btn" id="btn-run">RUN</div>
+      <div class="action-btn" id="btn-f">F</div>
+      <div class="action-btn" id="btn-e">E</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -154,6 +200,14 @@
 (function(){
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d');
+  
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isMobile) {
+    document.body.classList.add('mobile');
+    document.getElementById('desktopControls').style.display = 'none';
+    document.getElementById('mobileControlsText').style.display = 'inline';
+  }
+
   const elSanity = document.getElementById('sanity');
   const elFound = document.getElementById('found');
   const elObjective = document.getElementById('objective');
@@ -187,6 +241,67 @@
   function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  let ambientStarted = false;
+  function startAmbientMusic() {
+    if (!audioCtx || ambientStarted) return;
+    ambientStarted = true;
+
+    let masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.08; 
+    masterGain.connect(audioCtx.destination);
+
+    let drone1 = audioCtx.createOscillator();
+    drone1.type = 'sine';
+    drone1.frequency.value = 50; 
+    let drone2 = audioCtx.createOscillator();
+    drone2.type = 'triangle';
+    drone2.frequency.value = 51; 
+
+    let droneGain = audioCtx.createGain();
+    droneGain.gain.value = 0.5;
+
+    drone1.connect(droneGain);
+    drone2.connect(droneGain);
+    droneGain.connect(masterGain);
+
+    let lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.1; 
+
+    let lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.3; 
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(droneGain.gain); 
+
+    let bufferSize = audioCtx.sampleRate * 5; 
+    let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    let data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    let noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    let filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 200; 
+
+    let noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = 0.15;
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+
+    drone1.start();
+    drone2.start();
+    lfo.start();
+    noise.start();
   }
   
   function playTone(freq, type, duration, vol) {
@@ -264,7 +379,6 @@
     lastSanitySound = state.time;
     playTone(150, 'sine', 0.5, 0.15);
   }
-  // -----------------------------------------
 
   const map1 = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -313,7 +427,7 @@
     found: 0,
     time: 0,
     hasFlashlight: false,
-    isFlashlightOn: false, // НОВОЕ СВОЙСТВО
+    isFlashlightOn: false,
     hasCassette1: false,
     hasCassette2: false,
     gateActive: false,
@@ -451,7 +565,7 @@
     playClick();
     state.running = false;
     state.currentCassetteType = type;
-    document.exitPointerLock();
+    if (!isMobile) document.exitPointerLock();
     elRiftPrompt.style.opacity = 0;
     elCassettePlayer.style.display = 'flex';
     elCassetteText.textContent = '';
@@ -513,7 +627,7 @@
     playClick();
     if (state.keypadInput === "505") {
       elKeypadUI.style.display = 'none';
-      document.exitPointerLock();
+      if (!isMobile) document.exitPointerLock();
       finish(true);
     } else {
       elKeypadScreen.style.color = '#ff0000';
@@ -530,6 +644,15 @@
     elKeypadScreen.style.color = '#00ff00';
     let display = state.keypadInput.padEnd(3, '_').split('').join(' ');
     elKeypadScreen.textContent = display;
+  }
+
+  function toggleFlashlight() {
+    if (state.hasFlashlight && state.battery > 0) {
+      state.isFlashlightOn = !state.isFlashlightOn;
+      playClick();
+      elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ';
+      say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2);
+    }
   }
 
   function update(dt) {
@@ -589,7 +712,7 @@
 
       if (Math.hypot(p.x - m.x, p.y - m.y) < 0.6) {
         state.running = false;
-        document.exitPointerLock();
+        if (!isMobile) document.exitPointerLock();
         finish(false);
       }
     }
@@ -597,7 +720,7 @@
     let decay = state.level === 1 ? 0.6 : 1.2;
     if (sprint) decay += 1.8;
 
-    // ЛОГИКА БАТАРЕЙКИ (Тратится только если включен)
+    // ЛОГИКА БАТАРЕЙКИ
     if (state.hasFlashlight) {
       if (state.isFlashlightOn && state.battery > 0) {
         state.battery -= 0.5 * dt;
@@ -609,9 +732,9 @@
         }
         elBatteryLevel.textContent = Math.floor(state.battery);
       } else if (state.battery <= 0) {
-        decay += 2.0; // Если батарейка сдохла, а мы в темноте - страдаем
+        decay += 2.0; 
       } else if (!state.isFlashlightOn) {
-        decay += 1.0; // В темноте без света страшнее
+        decay += 1.0; 
       }
     }
     
@@ -664,7 +787,7 @@
             k.e = false;
             state.locker.active = false;
             state.hasFlashlight = true;
-            state.isFlashlightOn = true; // Включаем при взятии
+            state.isFlashlightOn = true; 
             state.hasCassette2 = true;
             state.battery = 100;
             elInventory.style.display = 'block';
@@ -717,7 +840,7 @@
             if (k.e) {
               k.e = false;
               state.running = false; 
-              document.exitPointerLock(); 
+              if (!isMobile) document.exitPointerLock(); 
               elKeypadUI.style.display = 'flex';
               state.keypadInput = "";
               updateKeypadScreen();
@@ -926,7 +1049,7 @@
       ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
     }
 
-    const cell = 12; 
+    const cell = isMobile ? 7 : 12; 
     const mapW = currentMap[0].length * cell;
     const mapH = currentMap.length * cell;
     const ox = vw - mapW - 20;
@@ -948,11 +1071,11 @@
       for (let a of state.anomalies) {
         if (a.found) continue;
         ctx.fillStyle = '#00bfff';
-        ctx.beginPath(); ctx.arc(ox + a.x*cell, oy + a.y*cell, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ox + a.x*cell, oy + a.y*cell, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill();
       }
       if (state.rift.active) {
         ctx.fillStyle = '#00ffff';
-        ctx.beginPath(); ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, 6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, isMobile ? 3 : 6, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = '#ffffff'; ctx.stroke();
       }
     } else if (state.level === 2) {
@@ -962,18 +1085,18 @@
       }
       if (state.cassette.active) {
         ctx.fillStyle = '#ffcc00';
-        ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, isMobile ? 3 : 5, 0, Math.PI*2); ctx.fill();
       }
       if (state.gateActive) {
         ctx.fillStyle = '#00ff00';
-        ctx.beginPath(); ctx.arc(ox + state.gate.x*cell, oy + state.gate.y*cell, 6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ox + state.gate.x*cell, oy + state.gate.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.stroke();
       }
     }
     
     if (state.monster.active) {
       ctx.fillStyle = '#ff0000';
-      ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, 6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill();
     }
 
     let pX = ox + p.x*cell;
@@ -983,7 +1106,7 @@
 
     if (!isNaN(pX) && !isNaN(pY) && !isNaN(lineX) && !isNaN(lineY)) {
       ctx.fillStyle = '#dcdcdc';
-      ctx.beginPath(); ctx.arc(pX, pY, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pX, pY, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill();
       ctx.strokeStyle = '#dcdcdc';
       ctx.beginPath(); ctx.moveTo(pX, pY); ctx.lineTo(lineX, lineY); ctx.stroke();
     }
@@ -1013,6 +1136,7 @@
   }
   requestAnimationFrame(loop);
 
+  // --- ПК УПРАВЛЕНИЕ ---
   window.addEventListener('keydown', e => {
     if (e.code === 'ArrowUp' || e.code === 'KeyW') state.keys.up = true;
     if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyX') state.keys.down = true;
@@ -1020,15 +1144,7 @@
     if (e.code === 'ArrowRight' || e.code === 'KeyD') state.keys.right = true;
     if (e.code === 'KeyE') state.keys.e = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = true;
-    
-    // Включение/выключение фонарика
-    if (e.code === 'KeyF' && state.hasFlashlight && state.battery > 0) {
-      state.isFlashlightOn = !state.isFlashlightOn;
-      playClick();
-      elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ';
-      say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2);
-    }
-
+    if (e.code === 'KeyF') toggleFlashlight();
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
 
@@ -1042,7 +1158,7 @@
   });
 
   cv.addEventListener('click', () => {
-    if (state.running) cv.requestPointerLock();
+    if (state.running && !isMobile) cv.requestPointerLock();
   });
 
   document.addEventListener('mousemove', (e) => {
@@ -1051,6 +1167,76 @@
       state.player.angle += move * 0.002;
     }
   });
+
+  // --- МОБИЛЬНОЕ УПРАВЛЕНИЕ (СЕНСОР) ---
+  if (isMobile) {
+    const bindBtn = (id, key) => {
+      const el = document.getElementById(id);
+      el.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[key] = true; }, {passive: false});
+      el.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false});
+      el.addEventListener('touchcancel', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false});
+    };
+
+    bindBtn('btn-up', 'up');
+    bindBtn('btn-down', 'down');
+    bindBtn('btn-left', 'left');
+    bindBtn('btn-right', 'right');
+    bindBtn('btn-run', 'shift');
+
+    document.getElementById('btn-f').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      toggleFlashlight();
+    }, {passive: false});
+
+    const btnE = document.getElementById('btn-e');
+    btnE.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      state.keys.e = true;
+      if (navigator.vibrate) navigator.vibrate(40);
+      setTimeout(() => state.keys.e = false, 200);
+    }, {passive: false});
+
+    // Свайп для камеры
+    let lookTouchId = null;
+    let lastLookX = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.target.tagName === 'CANVAS' || e.target.id === 'app' || e.target.id === 'mobileControls') {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (touch.clientX > window.innerWidth / 2) {
+            lookTouchId = touch.identifier;
+            lastLookX = touch.clientX;
+            break;
+          }
+        }
+      }
+    }, {passive: false});
+
+    window.addEventListener('touchmove', (e) => {
+      if (lookTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === lookTouchId) {
+          const dx = touch.clientX - lastLookX;
+          state.player.angle += dx * 0.006;
+          lastLookX = touch.clientX;
+          e.preventDefault();
+        }
+      }
+    }, {passive: false});
+
+    window.addEventListener('touchend', (e) => {
+      if (lookTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === lookTouchId) {
+          lookTouchId = null;
+          break;
+        }
+      }
+    }, {passive: false});
+  }
 
   elContinueBtn.addEventListener('click', () => {
     playClick();
@@ -1061,14 +1247,14 @@
     
     if (state.currentCassetteType === 1) {
       state.running = true;
-      cv.requestPointerLock();
+      if (!isMobile) cv.requestPointerLock();
       elObjective.textContent = 'НАЙДИ ШКАФ';
     } else if (state.currentCassetteType === 2) {
       state.gateActive = true;
       elObjective.textContent = 'НАЙДИ ШЛЮЗ';
       say('Код у тебя. Найди зеленый шлюз.', 5);
       state.running = true;
-      cv.requestPointerLock();
+      if (!isMobile) cv.requestPointerLock();
     } else if (state.currentCassetteType === 3) {
       state.cassette3Played = true;
       state.monster.active = true;
@@ -1078,13 +1264,14 @@
       elObjective.textContent = 'ВВЕДИ КОД!';
       say('Оно уже здесь! Вводи код!', 5);
       state.running = true;
-      cv.requestPointerLock();
+      if (!isMobile) cv.requestPointerLock();
     }
   });
 
   function startGame() {
     playClick();
     initAudio();
+    startAmbientMusic();
 
     audio1.volume = 0; audio2.volume = 0; audio3.volume = 0;
     audio1.play().then(() => { audio1.pause(); audio1.currentTime = 0; audio1.volume = 1; }).catch(e => console.log(e));
@@ -1097,18 +1284,19 @@
     elRiftPrompt.style.opacity = 0;
     elSanity.textContent = '100';
     elFound.textContent = '0';
-    elSubs.textContent = 'Кликни по экрану. Собери 5 аномалий (E).';
+    elSubs.textContent = isMobile ? 'Используй кнопки и свайпы' : 'Кликни по экрану. Собери 5 аномалий (E).';
     state.msgT = 5;
     elTitle.style.display = 'none';
     elEnd.style.display = 'none';
     elCassettePlayer.style.display = 'none';
     elKeypadUI.style.display = 'none';
     state.running = true;
+    if (!isMobile) cv.requestPointerLock();
   }
 
   function finish(win) {
     state.running = false;
-    document.exitPointerLock();
+    if (!isMobile) document.exitPointerLock();
     elEnd.style.display = 'flex';
     if (win) {
       elEndTitle.textContent = 'ЛАБОРАТОРИЯ';
