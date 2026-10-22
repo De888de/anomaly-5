@@ -2,141 +2,151 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>CONNECT 5 — Аномалия</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Аномалия 5</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { height:100%; background:#000; overflow:hidden;
-    font-family:'Courier New',monospace; color:#c9c9c9; touch-action:none; }
-  #app { position:relative; width:100%; height:100%; }
-  canvas { display:block; width:100%; height:100%; touch-action:none; }
-  #vhs { position:absolute; inset:0; pointer-events:none; z-index:5;
-    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px); mix-blend-mode:multiply; }
-  #grain { position:absolute; inset:-50%; pointer-events:none; z-index:6; opacity:.07;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
-    animation:grain .18s steps(2) infinite; }
-  @keyframes grain { 0%{transform:translate(0,0)} 50%{transform:translate(-3%,2%)} 100%{transform:translate(2%,-2%)} }
+  /* ОБЩИЕ СТИЛИ (ИЗ АКТА 1) */
+  * { box-sizing: border-box; }
+  body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; color: #ddd; user-select: none; }
+  canvas { display: block; width: 100%; height: 100%; }
   
-  #hud { position:absolute; left:16px; bottom:16px; z-index:7;
-    font-size:14px; line-height:1.6; text-shadow:0 0 8px #000; }
-  #found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
+  /* VHS ЭФФЕКТЫ */
+  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 3; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 90%, rgba(0,0,0,0.95) 100%); }
+  #grain { position: absolute; inset: 0; pointer-events: none; z-index: 4; opacity: 0.06; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #flash { position: absolute; inset: 0; pointer-events: none; background: #f00; opacity: 0; z-index: 6; transition: opacity 0.12s; mix-blend-mode: screen; }
+  #fade { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; z-index: 50; transition: opacity 2s; }
+
+  /* HUD АКТ 1 */
+  #hud { position: absolute; top: 12px; left: 12px; right: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 6px; text-shadow: 0 1px 4px #000, 0 0 8px #000; font-size: 14px; z-index: 10; }
+  #subtitle { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); width: 82%; max-width: 760px; text-align: center; background: linear-gradient(180deg, rgba(0,0,0,0.82), rgba(10,0,0,0.9)); padding: 14px 22px; border-radius: 3px; border-left: 3px solid #b00; border-right: 3px solid #b00; font-size: 15px; line-height: 1.5; pointer-events: none; transition: opacity 0.5s; z-index: 10; box-shadow: 0 0 30px rgba(120,0,0,0.3); }
+  #crosshair-act1 { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(220,220,220,0.5); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 5; transition: all 0.15s; }
+  #crosshair-act1.active { border-color: #f33; box-shadow: 0 0 10px #f33; transform: translate(-50%,-50%) scale(1.4); }
   
-  #inventory { margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; display: none;}
-  .inv-item { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; font-weight: bold; margin-bottom: 4px;}
-
-  #objective { position:absolute; top:16px; left:16px; z-index:7; font-size:16px; color:#00bfff; text-shadow:0 0 10px #00bfff;}
+  .inventory { position: absolute; bottom: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
+  .inv-slot { width: 44px; height: 44px; border: 1px solid #333; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 22px; transition: all 0.2s; filter: grayscale(1) opacity(0.3); }
+  .inv-slot.active { filter: none; border-color: #a00; box-shadow: 0 0 12px rgba(160,0,0,0.7); }
   
-  #subs { position:absolute; bottom:80px; left:0; right:0; text-align:center;
-    z-index:8; font-size:17px; color:#e2e2e2; text-shadow:0 0 10px #000;
-    padding:0 40px; line-height:1.5; }
+  #objective { color: #ffb020; font-weight: bold; }
+  #health-bar { width: 220px; height: 9px; background: rgba(40,0,0,0.8); border: 1px solid #600; overflow: hidden; }
+  #health-fill { height: 100%; background: linear-gradient(90deg, #600, #c00, #f33); width: 100%; transition: width 0.4s; }
+  #controls-info { position: absolute; bottom: 10px; right: 12px; color: #555; font-size: 12px; text-align: right; pointer-events: none; z-index: 5; }
 
-  #riftPrompt { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    z-index:9; font-size:32px; color:#00bfff; text-shadow:0 0 20px #00bfff;
-    letter-spacing:4px; opacity:0; transition: opacity 0.5s; pointer-events:none; }
+  /* МИНИКАРТА */
+  #minimap-container { position: absolute; top: 12px; right: 12px; width: 180px; height: 180px; border: 2px solid #444; border-radius: 6px; background: rgba(0,0,0,0.7); overflow: hidden; z-index: 8; box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.6); display: none; }
+  #minimap { width: 100%; height: 100%; display: block; }
+  #minimap-label { position: absolute; bottom: 2px; right: 4px; font-size: 9px; color: #666; letter-spacing: 2px; text-shadow: 0 0 4px #000; pointer-events: none; }
 
-  #cassettePlayer { position:absolute; inset:0; z-index:14; background:rgba(0,0,0,0.95);
-    display:none; flex-direction:column; align-items:center; justify-content:center; padding:10vh 15vw; text-align:left; }
-  #cassettePlayer h3 { color:#ffcc00; letter-spacing:3px; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px; width:100%;}
-  #cassetteText { font-size:20px; line-height:1.8; color:#e0e0e0; min-height:150px; width:100%; white-space:pre-wrap; }
-  #continueBtn { margin-top:40px; display:none; background:none; border:1px solid #ffcc00;
-    color:#ffcc00; padding:12px 34px; font-family:inherit; font-size:16px;
-    letter-spacing:3px; cursor:pointer; transition: 0.3s; align-self: flex-start; }
-  #continueBtn:hover { background:#ffcc00; color:#000; }
+  /* СТАРТОВЫЙ ЭКРАН */
+  #start-screen { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #1a0505 0%, #000 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
+  #start-screen h1 { font-size: 72px; letter-spacing: 10px; margin: 0 0 8px 0; color: #b00; text-shadow: 0 0 20px #500, 0 0 60px #300, 0 0 100px #200; animation: pulse 3s infinite ease-in-out; }
+  @keyframes pulse { 0%,100%{opacity:0.9;} 50%{opacity:1;} }
+  #start-screen .sub { color: #a55; letter-spacing: 6px; margin-bottom: 26px; font-size: 13px; }
+  #start-screen p { color: #888; max-width: 540px; line-height: 1.7; margin-bottom: 34px; font-size: 14px; }
+  #start-screen button { background: rgba(20,0,0,0.7); color: #dcc; border: 1px solid #a00; padding: 15px 46px; font-size: 18px; font-family: 'Courier New', monospace; cursor: pointer; letter-spacing: 5px; transition: all 0.3s; }
+  #start-screen button:hover { background: #a00; color: #fff; box-shadow: 0 0 40px #a00; }
 
-  #keypadUI { position:absolute; inset:0; z-index:16; background:rgba(0,0,0,0.85);
-    display:none; flex-direction:column; align-items:center; justify-content:center; }
-  #keypadScreen { font-size:48px; letter-spacing:12px; color:#00ff00; text-shadow:0 0 20px #00ff00;
-    background:#111; padding:20px 40px; border:2px solid #333; border-radius:5px; margin-bottom:30px; min-width:300px; text-align:center; }
-  .keypad-grid { display:grid; grid-template-columns: repeat(3, 80px); gap:15px; }
-  .keypad-btn { background:#222; color:#eee; border:1px solid #444; font-size:28px; padding:15px;
-    font-family:inherit; cursor:pointer; transition:0.2s; border-radius:5px; }
-  .keypad-btn:hover { background:#444; }
-  .keypad-btn:active { background:#00ff00; color:#000; }
-  #keypadClear { grid-column: span 2; font-size:18px; }
-  #keypadEnter { font-size:18px; background:#0a2a0a; color:#00ff00; border-color:#00ff00; }
+  /* --- СТИЛИ АКТА 2 (АДАПТИРОВАННЫЕ) --- */
+  #act2-ui { display: none; position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+  #act2-hud { position: absolute; left: 16px; bottom: 16px; font-size: 14px; line-height: 1.6; text-shadow: 0 0 8px #000; color: #ddd; }
+  #act2-found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
+  #act2-inventory { margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; display: none;}
+  .act2-inv-item { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; font-weight: bold; margin-bottom: 4px;}
+  
+  #act2-objective { position: absolute; top: 16px; left: 16px; font-size: 16px; color: #ffb020; text-shadow:0 0 10px #000; font-weight: bold;}
+  #act2-subs { position: absolute; bottom: 80px; left: 0; right: 0; text-align: center; font-size: 17px; color: #e2e2e2; text-shadow:0 0 10px #000; padding:0 40px; line-height:1.5; }
+  #act2-riftPrompt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #b00; text-shadow: 0 0 20px #b00; letter-spacing: 4px; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+  #crosshair-act2 { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(220,220,220,0.5); border-radius: 50%; transform: translate(-50%,-50%); z-index: 5; }
 
-  #title { position:absolute; inset:0; z-index:12;
-    background:#000; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; text-align:center; padding:30px; }
-  #title h1 { font-size:52px; letter-spacing:14px; color:#dcdcdc; text-shadow:0 0 40px #3a3a3a; }
-  #title h2 { font-size:15px; letter-spacing:9px; color:#7d7d7d; margin-top:12px; }
-  #title .story { max-width:560px; margin-top:34px; font-size:14px; line-height:1.9; color:#8a8a8a; }
-  #title button { margin-top:38px; background:none; border:1px solid #555;
-    color:#cfcfcf; padding:14px 42px; font-family:inherit; font-size:16px;
-    letter-spacing:4px; cursor:pointer; transition:.25s; }
-  #title button:hover { background:#1a1a1a; border-color:#00bfff; color:#fff; }
+  #cassettePlayer { position: absolute; inset: 0; z-index: 14; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 10vh 15vw; text-align: left; pointer-events: auto; }
+  #cassettePlayer h3 { color: #ffcc00; letter-spacing: 3px; margin-bottom: 20px; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px; width: 100%; }
+  #cassetteText { font-size: 20px; line-height: 1.8; color: #e0e0e0; min-height: 150px; width: 100%; white-space: pre-wrap; }
+  #continueBtn { margin-top: 40px; display: none; background: none; border: 1px solid #ffcc00; color: #ffcc00; padding: 12px 34px; font-family: inherit; font-size: 16px; letter-spacing: 3px; cursor: pointer; transition: 0.3s; align-self: flex-start; }
+  #continueBtn:hover { background: #ffcc00; color: #000; }
 
-  #end { position:absolute; inset:0; z-index:15; display:none;
-    background:#000; flex-direction:column; align-items:center;
-    justify-content:center; text-align:center; }
-  #end h1 { letter-spacing:16px; font-size:40px; color:#d0d0d0; }
-  #end p { color:#7d7d7d; margin-top:20px; font-size:15px; letter-spacing:3px; }
-  #end button { margin-top:36px; background:none; border:1px solid #444;
-    color:#aaa; padding:12px 34px; font-family:inherit; font-size:14px;
-    letter-spacing:3px; cursor:pointer; }
-  #end button:hover { background:#151515; color:#fff; border-color:#00bfff; }
+  #keypadUI { position: absolute; inset: 0; z-index: 16; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+  #keypadScreen { font-size: 48px; letter-spacing: 12px; color: #00ff00; text-shadow: 0 0 20px #00ff00; background: #111; padding: 20px 40px; border: 2px solid #333; border-radius: 5px; margin-bottom: 30px; min-width: 300px; text-align: center; }
+  .keypad-grid { display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; }
+  .keypad-btn { background: #222; color: #eee; border: 1px solid #444; font-size: 28px; padding: 15px; font-family: inherit; cursor: pointer; transition: 0.2s; border-radius: 5px; }
+  .keypad-btn:hover { background: #444; }
+  .keypad-btn:active { background: #00ff00; color: #000; }
+  #keypadClear { grid-column: span 2; font-size: 18px; }
+  #keypadEnter { font-size: 18px; background: #0a2a0a; color: #00ff00; border-color: #00ff00; }
 
-  /* --- МОБИЛЬНОЕ УПРАВЛЕНИЕ --- */
+  #end-screen { position: absolute; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; text-align: center; padding: 20px; }
+  #end-screen h1 { color: #a00; font-size: 52px; letter-spacing: 8px; text-shadow: 0 0 40px #500; margin-bottom: 24px; }
+  #end-screen p { color: #777; max-width: 640px; line-height: 1.8; font-size: 16px; }
+
+  /* МОБИЛЬНОЕ УПРАВЛЕНИЕ (ДЛЯ АКТА 2) */
   #mobileControls { display: none; position: absolute; inset: 0; z-index: 25; pointer-events: none; }
   body.mobile #mobileControls { display: block; }
-  
-  /* Крестовина (D-Pad) */
   .dpad { position: absolute; bottom: 30px; left: 20px; width: 150px; height: 150px; pointer-events: auto; }
-  .dpad-btn { position: absolute; width: 50px; height: 50px; background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 20px; user-select: none; -webkit-user-select: none; }
+  .dpad-btn { position: absolute; width: 50px; height: 50px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; user-select: none; -webkit-user-select: none; }
   .dpad-btn:active { background: rgba(255,255,255,0.4); }
-  .dpad-up { top: 0; left: 50px; }
-  .dpad-down { bottom: 0; left: 50px; }
-  .dpad-left { top: 50px; left: 0; }
-  .dpad-right { top: 50px; right: 0; }
-
-  /* Кнопки действий */
-  .action-btns { position: absolute; bottom: 30px; right: 20px; display: grid;
-    grid-template-columns: 1fr 1fr; gap: 15px; pointer-events: auto; }
-  .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff;
-    font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;
-    user-select: none; -webkit-user-select: none; }
+  .dpad-up { top: 0; left: 50px; } .dpad-down { bottom: 0; left: 50px; } .dpad-left { top: 50px; left: 0; } .dpad-right { top: 50px; right: 0; }
+  .action-btns { position: absolute; bottom: 30px; right: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; pointer-events: auto; }
+  .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; }
   .action-btn:active { background: rgba(255,255,255,0.4); }
-  #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px;
-    background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff; font-size: 20px; }
-
-  /* Адаптация UI под мобилку */
-  body.mobile #subs { bottom: 200px; font-size: 14px; }
-  body.mobile #hud { font-size: 12px; left: 10px; bottom: 10px; }
-  body.mobile #objective { font-size: 14px; top: 10px; left: 10px; }
-  body.mobile #title .story { font-size: 12px; }
+  #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px; background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff; font-size: 20px; }
 </style>
 </head>
 <body>
-<div id="app">
-  <audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
-  <audio id="cassetteAudio2" src="instructions_2.wav" preload="auto"></audio>
-  <audio id="cassetteAudio3" src="instructions_3.wav" preload="auto"></audio>
 
-  <canvas id="cv"></canvas>
-  <div id="vhs"></div>
-  <div id="grain"></div>
-  <div id="riftPrompt">// начинаем путь</div>
+<!-- ================= АКТ 1 (THREE.JS) ================= -->
+<canvas id="c-act1" style="position:absolute; inset:0;"></canvas>
+<div id="vignette"></div>
+<div id="grain"></div>
+<div id="flash"></div>
+<div id="fade"></div>
 
-  <div id="objective">СОБЕРИ 5 АНОМАЛИЙ</div>
-  
+<div id="act1-ui" style="position:absolute; inset:0; pointer-events:none;">
+  <div id="crosshair-act1"></div>
   <div id="hud">
-    РАССУДОК: <span id="sanity">100</span>%<br>
-    АНОМАЛИИ: <span id="found">0</span> / 5
-    
-    <div id="inventory">
-      ИНВЕНТАРЬ:<br>
-      <div class="inv-item" id="invFlashlight" style="display:none;">
-        🔦 ФОНАРИК (<span id="flashlightStatus">ВКЛ</span> - <span id="batteryLevel">100</span>%)
-      </div>
-      <div class="inv-item" id="invCassette" style="display:none; color: #00bfff;">📼 КАССЕТА 1</div>
-      <div class="inv-item" id="invCassette2" style="display:none; color: #00bfff;">📼 КАССЕТА 2</div>
+    <div><span id="objective">Цель: Осмотреться в квартире</span></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <span id="health-text" style="font-size:12px;color:#a66;">100</span>
     </div>
   </div>
-  
-  <div id="subs"></div>
+  <div id="subtitle"></div>
+  <div class="inventory">
+    <div class="inv-slot active" id="slot0" title="Микрофон">🎤</div>
+    <div class="inv-slot" id="slot1" title="Тряпка">🧻</div>
+    <div class="inv-slot" id="slot2" title="Перчатки">🧤</div>
+  </div>
+  <div id="controls-info">WASD — движение &nbsp;|&nbsp; Мышь — обзор &nbsp;|&nbsp; E — взаимодействие &nbsp;|&nbsp; Shift — бег</div>
+  <div id="minimap-container">
+    <canvas id="minimap" width="180" height="180"></canvas>
+    <div id="minimap-label">MAP</div>
+  </div>
+</div>
+
+<div id="start-screen">
+  <div class="sub">SURVIVAL HORROR</div>
+  <h1>АНОМАЛИЯ 5</h1>
+  <p>После взрыва на заводе в городе начались аномалии.<br>Трещина в стене твоей квартиры — не то, чем кажется.<br><br><span style="color:#a00;">Один год. Один город. Одна аномалия.</span></p>
+  <button id="start-btn">НАЧАТЬ ИГРУ</button>
+  <p style="margin-top:22px;font-size:11px;color:#444;">Содержит сцены жестокости и психологического напряжения. 18+</p>
+</div>
+
+
+<!-- ================= АКТ 2 (CANVAS RAYCASTER) ================= -->
+<canvas id="c-act2" style="position:absolute; inset:0; display:none;"></canvas>
+
+<div id="act2-ui">
+  <div id="crosshair-act2"></div>
+  <div id="act2-objective">СОБЕРИ 5 АНОМАЛИЙ</div>
+  <div id="act2-hud">
+    РАССУДОК: <span id="act2-sanity">100</span>%<br>
+    АНОМАЛИИ: <span id="act2-found">0</span> / 5
+    <div id="act2-inventory">
+      ИНВЕНТАРЬ:<br>
+      <div class="act2-inv-item" id="invFlashlight" style="display:none;">🔦 ФОНАРИК [F] (<span id="act2-flashlightStatus">ВКЛ</span> - <span id="act2-batteryLevel">100</span>%)</div>
+      <div class="act2-inv-item" id="invCassette" style="display:none; color: #00bfff;">📼 КАССЕТА 1</div>
+      <div class="act2-inv-item" id="invCassette2" style="display:none; color: #00bfff;">📼 КАССЕТА 2</div>
+    </div>
+  </div>
+  <div id="act2-subs"></div>
+  <div id="act2-riftPrompt">// начинаем путь</div>
 
   <div id="cassettePlayer">
     <h3 id="cassetteTitle">■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ...</h3>
@@ -161,80 +171,565 @@
       <button class="keypad-btn" id="keypadEnter" onclick="submitKeypad()">ВВОД</button>
     </div>
   </div>
+</div>
 
-  <div id="title">
-    <h1>CONNECT 5</h1>
-    <h2>АНОМАЛИЯ</h2>
-    <p class="story">
-      Ты — оператор выездной группы.<br><br>
-      <span id="desktopControls"><b>W A S/X D</b> или <b>Стрелки</b> — движение · Мышь — камера<br>SHIFT — бег · E — взаимодействие · F — фонарик</span>
-      <span id="mobileControlsText" style="display:none;">Левая сторона — движение<br>Правая сторона — поворот камеры (свайп)<br>Кнопки справа — действия</span>
-    </p>
-    <button id="startBtn">НАЧАТЬ</button>
+<div id="end-screen">
+  <h1>КОНЕЦ</h1>
+  <p id="end-text"></p>
+</div>
+
+<div id="mobileControls">
+  <div class="dpad">
+    <div class="dpad-btn dpad-up" id="btn-up">▲</div>
+    <div class="dpad-btn dpad-left" id="btn-left">◀</div>
+    <div class="dpad-btn dpad-down" id="btn-down">▼</div>
+    <div class="dpad-btn dpad-right" id="btn-right">▶</div>
   </div>
-
-  <div id="end">
-    <h1 id="endTitle">КОНЕЦ</h1>
-    <p id="endText"></p>
-    <button id="againBtn">СНАЧАЛА</button>
-  </div>
-
-  <!-- МОБИЛЬНЫЕ КНОПКИ -->
-  <div id="mobileControls">
-    <div class="dpad">
-      <div class="dpad-btn dpad-up" id="btn-up">▲</div>
-      <div class="dpad-btn dpad-left" id="btn-left">◀</div>
-      <div class="dpad-btn dpad-down" id="btn-down">▼</div>
-      <div class="dpad-btn dpad-right" id="btn-right">▶</div>
-    </div>
-    <div class="action-btns">
-      <div class="action-btn" id="btn-run">RUN</div>
-      <div class="action-btn" id="btn-f">F</div>
-      <div class="action-btn" id="btn-e">E</div>
-    </div>
+  <div class="action-btns">
+    <div class="action-btn" id="btn-run">RUN</div>
+    <div class="action-btn" id="btn-f">F</div>
+    <div class="action-btn" id="btn-e">E</div>
   </div>
 </div>
 
+<!-- БИБЛИОТЕКА THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- ================= КОД АКТА 1 ================= -->
 <script>
-'use strict';
+const canvas1 = document.getElementById('c-act1');
+let act1Active = true;
+</script>
+<script>
 (function(){
-  const cv = document.getElementById('cv');
+  const canvas = document.getElementById('c-act1');
+  const STATE = { MENU:0, APARTMENT:1, ESCAPE:2, FOREST:3, ENDING:4 };
+  let gameState = STATE.MENU;
+  let currentObjective = "Осмотреться в квартире";
+  let health = 100;
+  let hasMic = true, hasCloth = false, hasGloves = false, handIsRed = false;
+  let anomaliesStarted = false;
+  let hallucinationTimer = 0;
+  const flags = { heardTrench:false, foundBlood:false, washedHand:false, heardNews:false, lockedDoor:false, talkedToGnida:false, fixedLamp:false, kgbStarted:false, wentIntoTrench:false };
+  let gameStarted = false;
+
+  let colliders = [];
+  function addCollider(obj, padding=0) { const box = new THREE.Box3().setFromObject(obj); box.min.x -= padding; box.min.z -= padding; box.max.x += padding; box.max.z += padding; colliders.push(box); }
+  function resolveCollisions(pos, radius=0.35) {
+    for (const box of colliders) {
+      const cx = Math.max(box.min.x, Math.min(pos.x, box.max.x));
+      const cz = Math.max(box.min.z, Math.min(pos.z, box.max.z));
+      const dx = pos.x - cx, dz = pos.z - cz;
+      const dist2 = dx*dx + dz*dz;
+      if (dist2 < radius*radius) {
+        const dist = Math.sqrt(dist2) || 0.0001;
+        const push = (radius - dist);
+        pos.x += (dx/dist) * push;
+        pos.z += (dz/dist) * push;
+        if (dist < 0.0001) {
+          const toMinX = pos.x - box.min.x; const toMaxX = box.max.x - pos.x; const toMinZ = pos.z - box.min.z; const toMaxZ = box.max.z - pos.z;
+          const m = Math.min(toMinX, toMaxX, toMinZ, toMaxZ);
+          if (m === toMinX) pos.x = box.min.x - radius; else if (m === toMaxX) pos.x = box.max.x + radius; else if (m === toMinZ) pos.z = box.min.z - radius; else pos.z = box.max.z + radius;
+        }
+      }
+    }
+  }
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x555555);
+  scene.fog = new THREE.FogExp2(0x555555, 0.02);
+  const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.05, 500);
+  camera.rotation.order = 'YXZ';
+  scene.add(camera);
+
+  function makeCanvas(size=256) { const c = document.createElement('canvas'); c.width = c.height = size; return c; }
+  function noisePixel(ctx, x, y, s, amt) {
+    const img = ctx.getImageData(x, y, s, s); const d = img.data;
+    for (let i = 0; i < d.length; i += 4) { const n = (Math.random()-0.5) * amt; d[i] = Math.max(0, Math.min(255, d[i]+n)); d[i+1] = Math.max(0, Math.min(255, d[i+1]+n)); d[i+2] = Math.max(0, Math.min(255, d[i+2]+n)); }
+    ctx.putImageData(img, x, y);
+  }
+  function texBeton(base=[90,88,84], size=256) {
+    const c = makeCanvas(size), ctx = c.getContext('2d'); ctx.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`; ctx.fillRect(0,0,size,size);
+    for (let i = 0; i < 700; i++) { const r = Math.random()*10+1; const a = Math.random()*0.14; const v = Math.random() > 0.5 ? 0 : 255; ctx.fillStyle = `rgba(${v},${v},${v},${a})`; ctx.beginPath(); ctx.arc(Math.random()*size, Math.random()*size, r, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(20,18,16,0.6)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 18; i++) { ctx.beginPath(); let x = Math.random()*size, y = Math.random()*size; ctx.moveTo(x,y); for (let s = 0; s < 20; s++) { x += (Math.random()-0.5)*30; y += (Math.random()-0.5)*30; ctx.lineTo(x,y); } ctx.stroke(); }
+    noisePixel(ctx, 0, 0, size, 24); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texBrick() {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = '#1e1814'; ctx.fillRect(0,0,256,256);
+    const bw = 60, bh = 22, gap = 3;
+    for (let row = 0; row < 256/bh + 1; row++) {
+      const off = (row % 2) * (bw/2);
+      for (let col = -1; col < 256/bw + 1; col++) {
+        const x = col*bw + off + gap/2; const y = row*bh + gap/2;
+        const shade = 55 + Math.random()*45;
+        ctx.fillStyle = `rgb(${shade+30|0},${shade*0.9|0},${shade*0.7|0})`; ctx.fillRect(x, y, bw-gap, bh-gap);
+        for (let k = 0; k < 10; k++) { ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.25})`; ctx.fillRect(x + Math.random()*(bw-gap), y + Math.random()*(bh-gap), 3+Math.random()*12, 2+Math.random()*8); }
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.06})`; ctx.fillRect(x, y, bw-gap, 1);
+      }
+    }
+    noisePixel(ctx, 0, 0, 256, 20); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texParket() {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = '#2a1810'; ctx.fillRect(0,0,256,256);
+    const plankW = 256/4, plankH = 256/8;
+    for (let py = 0; py < 8; py++) {
+      const off = (py % 2) * plankW/2;
+      for (let px = -1; px < 5; px++) {
+        const x = px*plankW + off, y = py*plankH; const base = 50 + Math.random()*35;
+        ctx.fillStyle = `rgb(${base+25|0},${base*0.65|0},${base*0.4|0})`; ctx.fillRect(x+1, y+1, plankW-2, plankH-2);
+        for (let k = 0; k < 25; k++) {
+          ctx.strokeStyle = `rgba(${base*0.35|0},${base*0.18|0},${base*0.1|0},0.45)`; ctx.lineWidth = 0.5 + Math.random()*0.6; ctx.beginPath();
+          const yy = y + Math.random()*plankH; ctx.moveTo(x, yy); ctx.bezierCurveTo(x+plankW*0.3, yy+(Math.random()-0.5)*4, x+plankW*0.7, yy+(Math.random()-0.5)*4, x+plankW, yy+(Math.random()-0.5)*3); ctx.stroke();
+        }
+      }
+    }
+    noisePixel(ctx, 0, 0, 256, 16); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texAsphalt() {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = '#222224'; ctx.fillRect(0,0,256,256);
+    for (let i = 0; i < 6000; i++) { const v = 25 + Math.random()*45; ctx.fillStyle = `rgba(${v},${v},${v+3},${0.35+Math.random()*0.4})`; ctx.fillRect(Math.random()*256, Math.random()*256, 1+Math.random()*2, 1+Math.random()*2); }
+    ctx.strokeStyle = 'rgba(8,8,8,0.75)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) { ctx.beginPath(); let x = Math.random()*256, y = Math.random()*256; ctx.moveTo(x,y); for (let s = 0; s < 30; s++) { x += (Math.random()-0.5)*25; y += (Math.random()-0.5)*25; ctx.lineTo(x,y); } ctx.stroke(); }
+    noisePixel(ctx, 0, 0, 256, 28); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texRust() {
+    const c = makeCanvas(128), ctx = c.getContext('2d'); ctx.fillStyle = '#4a3828'; ctx.fillRect(0,0,128,128);
+    for (let i = 0; i < 2500; i++) { const r = 40 + Math.random()*95, g = 20 + Math.random()*55, b = 10 + Math.random()*30; ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${0.35+Math.random()*0.5})`; ctx.beginPath(); ctx.arc(Math.random()*128, Math.random()*128, Math.random()*3+0.5, 0, 7); ctx.fill(); }
+    noisePixel(ctx, 0, 0, 128, 40); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texBlood() {
+    const c = makeCanvas(128), ctx = c.getContext('2d'); ctx.clearRect(0,0,128,128);
+    const g = ctx.createRadialGradient(64,64,4,64,64,60); g.addColorStop(0, 'rgba(90,0,0,0.95)'); g.addColorStop(0.4, 'rgba(70,0,0,0.85)'); g.addColorStop(0.7, 'rgba(50,0,0,0.5)'); g.addColorStop(1, 'rgba(30,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(64,64,60,0,7); ctx.fill();
+    for (let i = 0; i < 50; i++) { const a = Math.random()*Math.PI*2; const r = 18 + Math.random()*55; const x = 64 + Math.cos(a)*r, y = 64 + Math.sin(a)*r; ctx.fillStyle = `rgba(${55+Math.random()*45|0},0,0,${0.5+Math.random()*0.4})`; ctx.beginPath(); ctx.arc(x,y, Math.random()*5+0.5, 0, 7); ctx.fill(); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texWood() {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = '#3e2618'; ctx.fillRect(0,0,256,256);
+    for (let i = 0; i < 300; i++) { ctx.strokeStyle = `rgba(${20+Math.random()*40|0},${10+Math.random()*20|0},${5+Math.random()*15|0},${0.3+Math.random()*0.4})`; ctx.lineWidth = 0.6 + Math.random()*1.6; ctx.beginPath(); const y = Math.random()*256; ctx.moveTo(0, y); for (let x = 0; x <= 256; x += 16) ctx.lineTo(x, y + Math.sin(x*0.05 + i)*3 + (Math.random()-0.5)*2); ctx.stroke(); }
+    for (let i = 0; i < 4; i++) { const cx = Math.random()*256, cy = Math.random()*256; const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 14); grad.addColorStop(0, 'rgba(15,8,4,0.9)'); grad.addColorStop(1, 'rgba(40,22,12,0)'); ctx.fillStyle = grad; ctx.beginPath(); ctx.ellipse(cx, cy, 14, 8, Math.random()*Math.PI, 0, 7); ctx.fill(); }
+    noisePixel(ctx, 0, 0, 256, 18); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texGrass() {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = '#0f140a'; ctx.fillRect(0,0,256,256);
+    for (let i = 0; i < 6000; i++) { const g = 18 + Math.random()*55; ctx.strokeStyle = `rgba(${g*0.4|0},${g|0},${g*0.3|0},${0.3+Math.random()*0.5})`; ctx.lineWidth = 0.6; ctx.beginPath(); const x = Math.random()*256, y = Math.random()*256; ctx.moveTo(x,y); ctx.lineTo(x + (Math.random()-0.5)*4, y - 2 - Math.random()*4); ctx.stroke(); }
+    noisePixel(ctx, 0, 0, 256, 22); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texCar(color) {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0,0,256,256);
+    for (let i = 0; i < 400; i++) { ctx.fillStyle = `rgba(${Math.random()>0.5?20:200},${Math.random()>0.5?20:200},${Math.random()>0.5?20:200},${Math.random()*0.08})`; ctx.fillRect(Math.random()*256, Math.random()*256, 1+Math.random()*3, 1+Math.random()*3); }
+    for (let i = 0; i < 6; i++) { const x = Math.random()*256; const grad = ctx.createLinearGradient(x, 0, x+8, 0); grad.addColorStop(0, 'rgba(255,255,255,0)'); grad.addColorStop(0.5, 'rgba(255,255,255,0.06)'); grad.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = grad; ctx.fillRect(x, 0, 8, 256); }
+    noisePixel(ctx, 0, 0, 256, 8); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+  function texHandSkin(red) {
+    const c = makeCanvas(256), ctx = c.getContext('2d'); const base = red ? [200, 20, 20] : [216, 176, 144];
+    ctx.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`; ctx.fillRect(0,0,256,256);
+    for (let i = 0; i < 3000; i++) { const v = red ? 0 : Math.random()*40; ctx.fillStyle = `rgba(${base[0]-(red?80:30)-v|0},${base[1]-(red?80:30)-v|0},${base[2]-(red?80:30)-v|0},${0.15+Math.random()*0.3})`; ctx.beginPath(); ctx.arc(Math.random()*256, Math.random()*256, Math.random()*1.5+0.3, 0, 7); ctx.fill(); }
+    for (let i = 0; i < 10; i++) { ctx.strokeStyle = red ? `rgba(70,0,0,${0.4+Math.random()*0.3})` : `rgba(${base[0]-70|0},${base[1]-80|0},${base[2]-60|0},${0.25+Math.random()*0.25})`; ctx.lineWidth = 1 + Math.random()*2; ctx.beginPath(); let x = Math.random()*256, y = Math.random()*256; ctx.moveTo(x,y); for (let s = 0; s < 12; s++) { x += (Math.random()-0.5)*40; y += (Math.random()-0.5)*40; ctx.lineTo(x,y); } ctx.stroke(); }
+    if (red) { for (let i = 0; i < 15; i++) { const x = Math.random()*256; const grad = ctx.createLinearGradient(x, 0, x, 256); grad.addColorStop(0, 'rgba(60,0,0,0)'); grad.addColorStop(0.5, 'rgba(80,0,0,0.7)'); grad.addColorStop(1, 'rgba(40,0,0,0)'); ctx.fillStyle = grad; ctx.fillRect(x - 2, 0, 4 + Math.random()*3, 256); } }
+    noisePixel(ctx, 0, 0, 256, 12); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+  }
+
+  const TEX = { beton: texBeton([100,96,92]), betonDark: texBeton([55,52,50]), brick: texBrick(), parket: texParket(), asphalt: texAsphalt(), rust: texRust(), blood: texBlood(), wood: texWood(), grass: texGrass(), skin: texHandSkin(false), skinRed: texHandSkin(true) };
+  const carTexCache = {};
+  function getCarTex(hex) { const key = hex.toString(16); if (!carTexCache[key]) carTexCache[key] = texCar('#' + (0x1000000 + hex).toString(16).slice(1)); return carTexCache[key]; }
+  function rep(tex, x, y) { const t = tex.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(x, y); return t; }
+
+  const MAT = {
+    wall: new THREE.MeshStandardMaterial({ map: rep(TEX.beton, 2, 1), roughness: 0.95 }),
+    floor: new THREE.MeshStandardMaterial({ map: rep(TEX.parket, 4, 4), roughness: 0.7, metalness: 0.05 }),
+    wood: new THREE.MeshStandardMaterial({ map: rep(TEX.wood, 1, 1), roughness: 0.85 }),
+    woodDark: new THREE.MeshStandardMaterial({ map: rep(TEX.wood, 1, 1), roughness: 0.85, color: 0x998877 }),
+    metal: new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.9, roughness: 0.25 }),
+    metalDark: new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.85, roughness: 0.35 }),
+    rust: new THREE.MeshStandardMaterial({ map: rep(TEX.rust, 2, 2), roughness: 0.85, metalness: 0.4 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0x88aacc, metalness: 0.95, roughness: 0.05, transparent: true, opacity: 0.35 }),
+    glassDark: new THREE.MeshStandardMaterial({ color: 0x111118, metalness: 0.95, roughness: 0.15 }),
+    asphalt: new THREE.MeshStandardMaterial({ map: rep(TEX.asphalt, 6, 6), roughness: 0.98 }),
+    grass: new THREE.MeshStandardMaterial({ map: rep(TEX.grass, 12, 12), roughness: 1.0 }),
+    blood: new THREE.MeshStandardMaterial({ map: TEX.blood, transparent: true, roughness: 0.25, depthWrite: false }),
+    skin: new THREE.MeshStandardMaterial({ map: TEX.skin, roughness: 0.75 }),
+    skinRed: new THREE.MeshStandardMaterial({ map: TEX.skinRed, roughness: 0.45, metalness: 0.15, emissive: 0x330000, emissiveIntensity: 0.5 }),
+    nail: new THREE.MeshStandardMaterial({ color: 0xeeddcc, roughness: 0.35 }),
+    nailRed: new THREE.MeshStandardMaterial({ color: 0xdd2200, roughness: 0.4, emissive: 0x330000, emissiveIntensity: 0.4 }),
+    tvScreen: new THREE.MeshStandardMaterial({ color: 0x0a0a22, emissive: 0x1a1a44, emissiveIntensity: 0.9 }),
+    fabric: new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.95 }),
+    tire: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95, metalness: 0.1 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.98, roughness: 0.1 }),
+    headlight: new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffeecc, emissiveIntensity: 1.8 }),
+    taillight: new THREE.MeshStandardMaterial({ color: 0x990000, emissive: 0xcc0000, emissiveIntensity: 1.2 }),
+    plate: new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.6, metalness: 0.2 }),
+    lamp: new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa22, emissiveIntensity: 2.5 })
+  };
+
+  const ambient = new THREE.AmbientLight(0x404050, 0.45); scene.add(ambient);
+  const hemi = new THREE.HemisphereLight(0x8a8a9a, 0x2a2018, 0.6); scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xaab0c0, 0.5); dir.position.set(40, 70, 25); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048); dir.shadow.camera.near = 1; dir.shadow.camera.far = 250; dir.shadow.camera.left = -80; dir.shadow.camera.right = 80; dir.shadow.camera.top = 80; dir.shadow.camera.bottom = -80; dir.shadow.bias = -0.0005; scene.add(dir);
+
+  const player = { height: 1.65, speed: 3.0, runSpeed: 5.2, yaw: 0, pitch: 0, canMove: true, position: new THREE.Vector3(0, 1.65, 0), bob: 0, radius: 0.35 };
+  let keys = {};
+  let mouseLocked = false;
+  const raycaster = new THREE.Raycaster();
+  let interactables = [];
+  let currentInteractable = null;
+  let viewmodelGroup = null;
+
+  function buildViewmodel() {
+    if (viewmodelGroup) camera.remove(viewmodelGroup);
+    viewmodelGroup = new THREE.Group();
+    const skinMat = handIsRed ? MAT.skinRed : MAT.skin;
+    const nailMat = handIsRed ? MAT.nailRed : MAT.nail;
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.075, 0.55, 12), skinMat); forearm.rotation.x = -Math.PI/2.2; forearm.rotation.z = 0.05; forearm.position.set(0.24, -0.22, -0.42); viewmodelGroup.add(forearm);
+    const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), skinMat); wrist.scale.set(1, 1.1, 1.1); wrist.position.set(0.24, -0.26, -0.62); viewmodelGroup.add(wrist);
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.04, 0.14), skinMat); palm.position.set(0.24, -0.28, -0.72); palm.rotation.x = 0.15; palm.rotation.z = -0.1; viewmodelGroup.add(palm);
+    const fingerLengths = [0.09, 0.11, 0.10, 0.075]; const fingerWidths = [0.022, 0.024, 0.022, 0.02];
+    for (let i = 0; i < 4; i++) {
+      const fx = 0.195 + i * 0.028;
+      const finger = new THREE.Mesh(new THREE.CylinderGeometry(fingerWidths[i], fingerWidths[i]*0.9, fingerLengths[i], 8), skinMat); finger.rotation.x = -0.3 + i*0.03; finger.rotation.z = -0.15; finger.position.set(fx, -0.295 - i*0.001, -0.79 - i*0.008); viewmodelGroup.add(finger);
+      const nail = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), nailMat); nail.scale.set(1.2, 1, 0.6); nail.position.set(fx, -0.295 - i*0.001, -0.83 - i*0.008); viewmodelGroup.add(nail);
+      const knuckle = new THREE.Mesh(new THREE.SphereGeometry(fingerWidths[i]*0.95, 6, 6), skinMat); knuckle.position.set(fx, -0.29, -0.755 - i*0.005); viewmodelGroup.add(knuckle);
+    }
+    const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.023, 0.07, 8), skinMat); thumb.rotation.x = 0.4; thumb.rotation.z = 1.1; thumb.position.set(0.17, -0.27, -0.72); viewmodelGroup.add(thumb);
+    viewmodelGroup.traverse(o => { if (o.isMesh) o.renderOrder = 999; });
+    camera.add(viewmodelGroup);
+  }
+
+  const worldGroup = new THREE.Group(); scene.add(worldGroup);
+  function clearWorld() { while (worldGroup.children.length) { const c = worldGroup.children[0]; worldGroup.remove(c); if (c.geometry) c.geometry.dispose(); } interactables = []; colliders = []; }
+
+  function buildApartment() {
+    clearWorld(); scene.fog = new THREE.FogExp2(0x555555, 0.02); scene.background = new THREE.Color(0x555555); dir.intensity = 0.15; hemi.intensity = 0.35;
+    const W = 12, D = 10, H = 3.2;
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W, 0.2, D), MAT.floor); floor.position.y = -0.1; floor.receiveShadow = true; worldGroup.add(floor);
+    const ceil = new THREE.Mesh(new THREE.BoxGeometry(W, 0.2, D), new THREE.MeshStandardMaterial({ map: rep(TEX.beton, 3, 3), color: 0x888888, roughness: 1.0 })); ceil.position.y = H; worldGroup.add(ceil);
+    function wall(x,z,w,d) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), MAT.wall); m.position.set(x, H/2, z); m.castShadow = true; m.receiveShadow = true; worldGroup.add(m); return m; }
+    wall(0, -D/2, W, 0.3); wall(0,  D/2, W, 0.3); wall(-W/2, 0, 0.3, D); wall(W/2, 0, 0.3, D);
+    const plinthMat = new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.9 });
+    for (const [x,z,w,d] of [[0,-D/2+0.2,W,0.08],[0,D/2-0.2,W,0.08],[-W/2+0.2,0,0.08,D],[W/2-0.2,0,0.08,D]]) { const p = new THREE.Mesh(new THREE.BoxGeometry(w, 0.15, d), plinthMat); p.position.set(x, 0.08, z); worldGroup.add(p); }
+    const winFrame = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.6, 2.6), MAT.woodDark); winFrame.position.set(W/2 - 0.2, 1.8, -1.2); worldGroup.add(winFrame);
+    const winGlass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.4, 2.4), MAT.glass); winGlass.position.set(W/2 - 0.12, 1.8, -1.2); worldGroup.add(winGlass);
+    for (let i = -1; i <= 1; i++) { const mull = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), MAT.woodDark); mull.position.set(W/2 - 0.12, 1.8, -1.2 + i*0.8); worldGroup.add(mull); }
+    const crackGroup = new THREE.Group();
+    const voidMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.3, 0.4), new THREE.MeshBasicMaterial({ color: 0x010101 })); voidMesh.position.set(0, 1.15, -D/2 + 0.05); crackGroup.add(voidMesh);
+    for (let i = 0; i < 14; i++) { const s = 0.15 + Math.random()*0.5; const line = new THREE.Mesh(new THREE.BoxGeometry(s, 0.02 + Math.random()*0.05, 0.02), new THREE.MeshBasicMaterial({ color: 0x000000 })); line.position.set((Math.random()-0.5)*0.8, 0.2 + Math.random()*2.1, -D/2 + 0.14); line.rotation.z = (Math.random()-0.5)*1.2; crackGroup.add(line); }
+    const crackGlow = new THREE.PointLight(0x550000, 0.4, 3); crackGlow.position.set(0, 1.2, -D/2 + 0.3); crackGroup.add(crackGlow); worldGroup.add(crackGroup);
+    const crackHit = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 0.5), new THREE.MeshBasicMaterial({ visible:false })); crackHit.position.set(0, 1.2, -D/2 + 0.3); crackHit.userData = { type:'crack', label:'Осмотреть трещину' }; worldGroup.add(crackHit); interactables.push(crackHit);
+    const tableTop = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1.2), MAT.wood); tableTop.position.set(3, 0.8, 2.4); tableTop.castShadow = true; tableTop.receiveShadow = true; worldGroup.add(tableTop);
+    for (const dx of [-0.85,0.85]) for (const dz of [-0.5,0.5]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.8,0.1), MAT.wood); leg.position.set(3+dx, 0.4, 2.4+dz); leg.castShadow = true; worldGroup.add(leg); }
+    addCollider(tableTop, 0.15);
+    const bedBase = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.4,3), MAT.woodDark); bedBase.position.set(-4, 0.2, 2); bedBase.castShadow = true; bedBase.receiveShadow = true; worldGroup.add(bedBase);
+    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.28,2.8), MAT.fabric); mattress.position.set(-4, 0.56, 2); mattress.castShadow = true; worldGroup.add(mattress);
+    const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.05,0.08,1.8), new THREE.MeshStandardMaterial({ color:0x5a4a3a, roughness:0.95 })); blanket.position.set(-4, 0.72, 2.4); blanket.castShadow = true; worldGroup.add(blanket);
+    const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.16,0.6), new THREE.MeshStandardMaterial({ color:0x7a7a80, roughness:0.95 })); pillow.position.set(-4, 0.78, 1.3); pillow.castShadow = true; worldGroup.add(pillow);
+    addCollider(bedBase, 0.1);
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(4.2,0.12,1), new THREE.MeshStandardMaterial({ color:0x2a2a2a, roughness:0.4, metalness:0.4 })); counter.position.set(-3, 0.96, -D/2+0.9); counter.castShadow = true; counter.receiveShadow = true; worldGroup.add(counter);
+    const cabinet = new THREE.Mesh(new THREE.BoxGeometry(4.2,0.85,0.95), MAT.wood); cabinet.position.set(-3, 0.47, -D/2+0.92); cabinet.castShadow = true; worldGroup.add(cabinet); addCollider(cabinet, 0.05);
+    const sink = new THREE.Mesh(new THREE.BoxGeometry(0.95,0.18,0.55), MAT.metal); sink.position.set(-4.2, 1.06, -D/2+0.95); worldGroup.add(sink);
+    const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.3,8), MAT.chrome); tap.position.set(-4.2, 1.3, -D/2+0.75); tap.rotation.z = 0.2; worldGroup.add(tap);
+    const sinkHit = new THREE.Mesh(new THREE.BoxGeometry(1.3,0.9,0.9), new THREE.MeshBasicMaterial({ visible:false })); sinkHit.position.set(-4.2, 1.0, -D/2+0.95); sinkHit.userData = { type:'sink', label:'Помыть руки' }; worldGroup.add(sinkHit); interactables.push(sinkHit);
+    const bedHit = new THREE.Mesh(new THREE.BoxGeometry(2.4,0.9,3.2), new THREE.MeshBasicMaterial({ visible:false })); bedHit.position.set(-4, 0.45, 2); bedHit.userData = { type:'bed', label:'Лечь на кровать' }; worldGroup.add(bedHit); interactables.push(bedHit);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.1,2.2,0.12), MAT.wood); door.position.set(W/2-0.1, 1.1, 2.5); door.castShadow = true; worldGroup.add(door);
+    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), MAT.chrome); handle.position.set(W/2-0.2, 1.0, 2.0); worldGroup.add(handle);
+    const doorHit = new THREE.Mesh(new THREE.BoxGeometry(1.3,2.4,0.4), new THREE.MeshBasicMaterial({ visible:false })); doorHit.position.set(W/2-0.15, 1.1, 2.5); doorHit.userData = { type:'door', label:'Осмотреть дверь' }; worldGroup.add(doorHit); interactables.push(doorHit);
+    const balcDoor = new THREE.Mesh(new THREE.BoxGeometry(0.1,2.2,1.2), MAT.glass); balcDoor.position.set(W/2-0.12, 1.1, -1.2); worldGroup.add(balcDoor);
+    const tvBody = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.95,0.18), new THREE.MeshStandardMaterial({ color:0x1a1a1a, roughness:0.5, metalness:0.3 })); tvBody.position.set(3, 1.65, -D/2+0.5); tvBody.castShadow = true; worldGroup.add(tvBody);
+    const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.75), MAT.tvScreen); tvScreen.position.set(3, 1.65, -D/2+0.41); worldGroup.add(tvScreen);
+    for (const a of [-0.3, 0.3]) { const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,0.5,5), MAT.chrome); ant.position.set(3+a, 2.3, -D/2+0.5); ant.rotation.z = a; worldGroup.add(ant); }
+    const tvStand = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.5,0.7), MAT.wood); tvStand.position.set(3, 0.25, -D/2+0.55); tvStand.castShadow = true; worldGroup.add(tvStand); addCollider(tvStand, 0.1);
+    const tvHit = new THREE.Mesh(new THREE.BoxGeometry(1.9,1.3,0.7), new THREE.MeshBasicMaterial({ visible:false })); tvHit.position.set(3, 1.5, -D/2+0.55); tvHit.userData = { type:'tv', label:'Посмотреть новости' }; worldGroup.add(tvHit); interactables.push(tvHit);
+    const wardrobe = new THREE.Mesh(new THREE.BoxGeometry(1.6,2.4,0.6), MAT.woodDark); wardrobe.position.set(-W/2+0.9, 1.2, -2); wardrobe.castShadow = true; worldGroup.add(wardrobe); addCollider(wardrobe, 0.05);
+    const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3,4), new THREE.MeshStandardMaterial({ color:0x4a2a2a, roughness:1 })); carpet.rotation.x = -Math.PI/2; carpet.position.set(0, 0.005, 0); carpet.receiveShadow = true; worldGroup.add(carpet);
+    const lampCord = new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.4,6), MAT.metalDark); lampCord.position.set(0, H-0.2, 0); worldGroup.add(lampCord);
+    const lampShade = new THREE.Mesh(new THREE.ConeGeometry(0.25,0.3,16, 1, true), new THREE.MeshStandardMaterial({ color:0x333333, roughness:0.6, side:THREE.DoubleSide })); lampShade.position.set(0, H-0.45, 0); worldGroup.add(lampShade);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color:0xffddaa })); bulb.position.set(0, H-0.5, 0); worldGroup.add(bulb);
+    const mainLight = new THREE.PointLight(0xffddaa, 0.9, 14, 1.5); mainLight.position.set(0, H-0.5, 0); mainLight.castShadow = true; mainLight.shadow.mapSize.set(1024,1024); mainLight.shadow.bias = -0.002; worldGroup.add(mainLight);
+    const kLight = new THREE.PointLight(0xffe8cc, 0.5, 9, 1.4); kLight.position.set(-3, 2.7, -3); worldGroup.add(kLight);
+    const cornerLight = new THREE.PointLight(0xff8844, 0.35, 7, 1.5); cornerLight.position.set(4, 2, 3); worldGroup.add(cornerLight);
+    player.position.set(2, player.height, 4); player.yaw = Math.PI * 0.75; player.pitch = -0.05; player.bob = 0;
+  }
+
+  function createCar(x, z, color, rotation) {
+    const car = new THREE.Group();
+    const carMat = new THREE.MeshStandardMaterial({ map: getCarTex(color), roughness: 0.45, metalness: 0.4 });
+    const carMatPlain = new THREE.MeshStandardMaterial({ color: color, roughness: 0.45, metalness: 0.4 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 4.2), carMat); body.position.set(0, 0.45, 0); body.castShadow = true; body.receiveShadow = true; car.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.55, 2.2), carMatPlain); cabin.position.set(0, 0.98, -0.1); cabin.castShadow = true; car.add(cabin);
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.4, 0.05), MAT.glassDark); windshield.position.set(0, 0.98, -1.15); windshield.rotation.x = 0.15; car.add(windshield);
+    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.4, 0.05), MAT.glassDark); rearGlass.position.set(0, 0.98, 0.95); rearGlass.rotation.x = -0.15; car.add(rearGlass);
+    for (const dx of [-0.88, 0.88]) { const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 2.0), MAT.glassDark); sideGlass.position.set(dx, 0.98, -0.1); car.add(sideGlass); }
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.08, 2.15), carMatPlain); roof.position.set(0, 1.27, -0.1); roof.castShadow = true; car.add(roof);
+    for (const dx of [-0.6, 0.6]) { const hl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.08), MAT.headlight); hl.position.set(dx, 0.55, -2.12); car.add(hl); const hlLight = new THREE.PointLight(0xffeecc, 0.3, 4, 2); hlLight.position.set(dx, 0.55, -2.3); car.add(hlLight); }
+    for (const dx of [-0.65, 0.65]) { const tl = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.08), MAT.taillight); tl.position.set(dx, 0.55, 2.12); car.add(tl); }
+    const plateF = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.02), MAT.plate); plateF.position.set(0, 0.35, -2.13); car.add(plateF);
+    const plateR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.02), MAT.plate); plateR.position.set(0, 0.35, 2.13); car.add(plateR);
+    const bmpF = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.15, 0.1), MAT.chrome); bmpF.position.set(0, 0.28, -2.15); car.add(bmpF);
+    const bmpR = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.15, 0.1), MAT.chrome); bmpR.position.set(0, 0.28, 2.15); car.add(bmpR);
+    for (const dx of [-0.9, 0.9]) for (const dz of [-1.4, 1.4]) { const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 16), MAT.tire); wheel.rotation.z = Math.PI/2; wheel.position.set(dx, 0.34, dz); wheel.castShadow = true; car.add(wheel); const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.26, 12), MAT.chrome); disc.rotation.z = Math.PI/2; disc.position.set(dx, 0.34, dz); car.add(disc); }
+    car.position.set(x, 0, z); car.rotation.y = rotation; worldGroup.add(car);
+    const box = new THREE.Box3().setFromObject(car); box.min.x -= 0.1; box.min.z -= 0.1; box.max.x += 0.1; box.max.z += 0.1; colliders.push(box); return car;
+  }
+
+  function buildCity() {
+    clearWorld(); scene.fog = new THREE.FogExp2(0x6b6b6b, 0.014); scene.background = new THREE.Color(0x6b6b6b); dir.intensity = 0.55; hemi.intensity = 0.6;
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), MAT.asphalt); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; worldGroup.add(ground);
+    const buildingColors = [0x4a4a4a, 0x3a3a3a, 0x5a5a4a, 0x4a3a3a, 0x3a4a4a, 0x50504a];
+    const buildingBoxes = [];
+    function createBuilding(x, z, w, d, h, color) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ map: rep(TEX.brick, Math.max(2, w/6), Math.max(2, h/6)), color: color, roughness: 0.9 })); b.position.set(x, h/2, z); b.castShadow = true; b.receiveShadow = true; worldGroup.add(b);
+      const box = new THREE.Box3().setFromObject(b); colliders.push(box); buildingBoxes.push({ x, z, w, d });
+      const winMat = new THREE.MeshStandardMaterial({ color: 0x0d0d10, emissive: 0x0d0d10, emissiveIntensity: 0.15, roughness: 0.4 });
+      const litMat = new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa44, emissiveIntensity: 0.9 });
+      const rows = Math.floor(h/3);
+      const sides = [{ normal:'z', sign: 1, width: w },{ normal:'z', sign:-1, width: w },{ normal:'x', sign: 1, width: d },{ normal:'x', sign:-1, width: d }];
+      for (const s of sides) { const cols = Math.floor(s.width/2.6); for (let r = 0; r < rows; r++) { for (let c = 0; c < cols; c++) { if (Math.random() > 0.42) { const lit = Math.random() > 0.75; const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), lit ? litMat : winMat); const off = -s.width/2 + 1.4 + c*2.6; if (s.normal === 'z') { win.position.set(x + off, 2.2 + r*3, z + s.sign*(d/2 + 0.02)); win.rotation.y = s.sign > 0 ? 0 : Math.PI; } else { win.position.set(x + s.sign*(w/2 + 0.02), 2.2 + r*3, z + off); win.rotation.y = s.sign > 0 ? Math.PI/2 : -Math.PI/2; } worldGroup.add(win); } } } }
+    }
+    for (let bx = -140; bx <= 140; bx += 48) { for (let bz = -140; bz <= 140; bz += 48) { if (Math.abs(bx) < 30 && Math.abs(bz) < 30) continue; const w = 14 + Math.random()*10; const d = 14 + Math.random()*10; const h = 16 + Math.random()*32; createBuilding(bx + (Math.random()-0.5)*8, bz + (Math.random()-0.5)*8, w, d, h, buildingColors[(Math.random()*buildingColors.length)|0]); } }
+    const factory = new THREE.Mesh(new THREE.BoxGeometry(44, 26, 32), new THREE.MeshStandardMaterial({ map: rep(TEX.brick, 6, 4), color: 0x2a2018, roughness: 0.95 })); factory.position.set(-85, 13, -85); factory.castShadow = true; worldGroup.add(factory); colliders.push(new THREE.Box3().setFromObject(factory));
+    for (let i = 0; i < 4; i++) { const pipe = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.0, 16, 10), MAT.rust); pipe.position.set(-100 + i*9, 34, -88 + i*5); pipe.castShadow = true; worldGroup.add(pipe); }
+    const anomalyGlow = new THREE.PointLight(0xaa00aa, 2.5, 70, 1.5); anomalyGlow.position.set(-85, 32, -85); worldGroup.add(anomalyGlow);
+    for (let i = -3; i <= 3; i++) { for (let j = -3; j <= 3; j++) { if (Math.random() > 0.45) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 6.5, 8), MAT.metalDark); pole.position.set(i*40 + 16, 3.25, j*40 + 16); pole.castShadow = true; worldGroup.add(pole); const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.15, 0.4), MAT.lamp); head.position.set(i*40 + 16, 6.4, j*40 + 16); worldGroup.add(head); const pl = new THREE.PointLight(0xffaa44, 0.55, 18, 1.6); pl.position.set(i*40 + 16, 6.1, j*40 + 16); worldGroup.add(pl); } } }
+    function isFarFromBuildings(x, z, radius=8) { for (const b of buildingBoxes) { const dx = Math.max(Math.abs(x - b.x) - b.w/2, 0); const dz = Math.max(Math.abs(z - b.z) - b.d/2, 0); if (Math.sqrt(dx*dx + dz*dz) < radius) return false; } return true; }
+    let stopX = 60, stopZ = 10;
+    for (let attempt = 0; attempt < 200; attempt++) { const tx = (Math.random() - 0.5) * 180; const tz = (Math.random() - 0.5) * 180; if (isFarFromBuildings(tx, tz, 6) && Math.abs(tx) > 25 && Math.abs(tz) > 25) { stopX = tx; stopZ = tz; break; } }
+    const bs = new THREE.Group();
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.12, 2.2), MAT.rust); roof.position.set(0, 2.6, 0); roof.castShadow = true; bs.add(roof);
+    for (const dx of [-2, 2]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.6, 8), MAT.rust); post.position.set(dx, 1.3, 0); bs.add(post); }
+    const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.1, 0.5), MAT.wood); benchSeat.position.set(0, 0.55, 0.6); bs.add(benchSeat);
+    const benchBack = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.5, 0.1), MAT.wood); benchBack.position.set(0, 0.85, 0.85); bs.add(benchBack);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.05), new THREE.MeshStandardMaterial({ color: 0x222a55, emissive: 0x222a55, emissiveIntensity: 0.3 })); sign.position.set(0, 2.9, 0); bs.add(sign);
+    bs.position.set(stopX, 0, stopZ); worldGroup.add(bs);
+    const stopHit = new THREE.Mesh(new THREE.BoxGeometry(5,3,4), new THREE.MeshBasicMaterial({ visible:false })); stopHit.position.set(stopX, 1.5, stopZ); stopHit.userData = { type:'busstop', label:'Дойти до остановки' }; worldGroup.add(stopHit); interactables.push(stopHit); window._stopPos = new THREE.Vector3(stopX, 0, stopZ);
+    const carColors = [0x553333, 0x333355, 0x335533, 0x555533, 0x663344, 0x444466, 0x884433, 0x334466];
+    for (let i = 0; i < 20; i++) { const x = (Math.random()-0.5)*220; const z = (Math.random()-0.5)*220; if (Math.abs(x) < 20 && Math.abs(z) < 20) continue; if (Math.hypot(x - stopX, z - stopZ) < 8) continue; createCar(x, z, carColors[(Math.random()*carColors.length)|0], Math.random()*Math.PI*2); }
+    player.position.set(10, player.height, 10); player.yaw = Math.PI * 0.25; player.pitch = 0; player.bob = 0;
+  }
+
+  function buildForest() {
+    clearWorld(); scene.fog = new THREE.FogExp2(0x14140c, 0.06); scene.background = new THREE.Color(0x14140c); dir.intensity = 0.15; hemi.intensity = 0.25;
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), MAT.grass); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; worldGroup.add(ground);
+    const trench = new THREE.Mesh(new THREE.BoxGeometry(7, 0.6, 9), new THREE.MeshStandardMaterial({ map: rep(TEX.betonDark, 3, 3), color: 0x2a2010, roughness: 1 })); trench.position.set(0, -0.3, 0); worldGroup.add(trench);
+    const blood = new THREE.Mesh(new THREE.CircleGeometry(1.3, 20), MAT.blood); blood.rotation.x = -Math.PI/2; blood.position.set(1, 0.02, 2); worldGroup.add(blood);
+    for (let i = 0; i < 50; i++) { const x = (Math.random()-0.5)*90; const z = (Math.random()-0.5)*90; if (Math.abs(x) < 5 && Math.abs(z) < 6) continue; const h = 4 + Math.random()*4; const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.28, h, 6), new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 1 })); trunk.position.set(x, h/2, z); trunk.castShadow = true; worldGroup.add(trunk); colliders.push(new THREE.Box3(new THREE.Vector3(x-0.3, 0, z-0.3), new THREE.Vector3(x+0.3, h, z+0.3))); for (let k = 0; k < 3; k++) { const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.4 + Math.random()*0.8, 2.2 + Math.random()*1.5, 6), new THREE.MeshStandardMaterial({ color: 0x0a1406, roughness: 1 })); foliage.position.set(x, h + k*0.8 - 0.3, z); foliage.castShadow = true; worldGroup.add(foliage); } }
+    const moon = new THREE.PointLight(0x4466aa, 0.4, 40, 1.5); moon.position.set(0, 15, 0); worldGroup.add(moon);
+    const bs = new THREE.Group(); const roof = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.12, 2.2), MAT.rust); roof.position.set(0, 2.6, 0); bs.add(roof); for (const dx of [-2, 2]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,2.6,8), MAT.rust); post.position.set(dx, 1.3, 0); bs.add(post); } const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.1, 0.5), MAT.wood); benchSeat.position.set(0, 0.55, 0.6); bs.add(benchSeat); bs.position.set(0, 0, -30); worldGroup.add(bs);
+    const escapeHit = new THREE.Mesh(new THREE.BoxGeometry(5,3,4), new THREE.MeshBasicMaterial({ visible:false })); escapeHit.position.set(0, 1.5, -30); escapeHit.userData = { type:'escape', label:'Дойти до остановки' }; worldGroup.add(escapeHit); interactables.push(escapeHit);
+    player.position.set(0, player.height, 2); player.yaw = Math.PI; player.pitch = 0.05; player.bob = 0;
+  }
+
+  document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'KeyE') tryInteract(); });
+  document.addEventListener('keyup', e => keys[e.code] = false);
+  canvas.addEventListener('click', () => { if (gameState !== STATE.MENU && gameState !== STATE.ENDING && gameState !== STATE.ACT2) canvas.requestPointerLock(); });
+  document.addEventListener('pointerlockchange', () => { mouseLocked = document.pointerLockElement === canvas; });
+  document.addEventListener('mousemove', e => { if (!mouseLocked) return; player.yaw -= e.movementX * 0.0022; player.pitch -= e.movementY * 0.0022; player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch)); });
+
+  function tryInteract() {
+    if (!currentInteractable) return;
+    const t = currentInteractable.userData.type;
+    switch(t) {
+      case 'crack':
+        if (!flags.heardTrench) { showSubtitle("Ты ставишь микрофон в трещину. Сначала — тишина. Потом гул, будто из глубин земли. Шёпот. Микрофон вибрирует в руке. Ты слышишь: «...это не трещина...»"); flags.heardTrench = true; currentObjective = "Лечь на кровать и отдохнуть"; updateHUD(); anomaliesStarted = true; } else showSubtitle("Гул не прекращается. Он будто ждёт."); break;
+      case 'bed':
+        if (!flags.heardTrench) { showSubtitle("Сначала осмотри трещину."); return; }
+        if (!flags.foundBlood) triggerHallucinationSequence(); else showSubtitle("Ты не можешь заснуть. Закрывая глаза — видишь красный туман."); break;
+      case 'sink':
+        if (flags.foundBlood && !flags.washedHand) { showSubtitle("Ты трёшь руку тряпкой. Потом водой. Но красное не смывается — оно въелось в кожу, будто кровь проступает изнутри."); flags.washedHand = true; handIsRed = true; hasCloth = true; updateInventoryUI(); buildViewmodel(); currentObjective = "Посмотреть новости по телевизору"; updateHUD(); setTimeout(() => { showSubtitle("По телевизору — экстренные новости: «...полностью красный человек убил двоих на улице Ленина. Началась эвакуация...» За окном грохот — столб упал на трамвай."); flags.heardNews = true; currentObjective = "Запереть дверь и не впускать никого"; updateHUD(); }, 4500); } else if (handIsRed) showSubtitle("Красное не смывается. Вода стекает красными каплями."); else showSubtitle("Ты умываешься. Обычная вода."); break;
+      case 'tv':
+        if (flags.foundBlood && !flags.heardNews) { showSubtitle("Новости: «...после взрыва на заводе фиксируются аномалии. Жителей просят не выходить. Полностью красный человек убил двоих...»"); flags.heardNews = true; currentObjective = "Запереть дверь и не впускать никого"; updateHUD(); hasGloves = true; updateInventoryUI(); } else if (!flags.foundBlood) showSubtitle("Обычные новости. Но бегущая строка внизу: «Аномальная зона расширяется»."); break;
+      case 'door':
+        if (flags.heardNews && !flags.lockedDoor) { showSubtitle("Ты запираешь дверь на все замки. Закрываешь балкон. Через минуту — стук. «Сосед! Мистер Гнида! Помоги лампочку починить!»"); flags.lockedDoor = true; hasGloves = true; updateInventoryUI(); currentObjective = "Выйти к мистеру Гниде"; updateHUD(); setTimeout(() => { flags.talkedToGnida = true; showSubtitle("Ты открываешь дверь. Мистер Гнида улыбается: «Лампочка в подъезде перегорела. Поможешь?»"); currentObjective = "Пойти с мистером Гнидой к лампочке"; updateHUD(); }, 3000); } else if (flags.lockedDoor) showSubtitle("Дверь заперта. Стук прекратился."); else showSubtitle("Обычная дверь. Пока что."); break;
+      case 'busstop': if (gameState === STATE.ESCAPE) { gameState = STATE.FOREST; buildForest(); showSubtitle("Ты добираешься до остановки. Но чувствуешь слабость... Ты спускаешься в канаву и теряешь сознание."); currentObjective = "Дойти до остановки в лесу"; updateHUD(); } break;
+      case 'escape': if (gameState === STATE.FOREST) triggerEnding(); break;
+      case 'escapeTrench': flags.wentIntoTrench = true; gameState = STATE.ESCAPE; document.getElementById('flash').style.opacity = '0.8'; setTimeout(() => { document.getElementById('flash').style.opacity = '0'; buildCity(); showSubtitle("Ты просыпаешься в грязи, смешанной с кровью. Вдалеке виднеется остановка. Нужно идти."); currentObjective = "Дойти до остановки автобуса"; updateHUD(); }, 1000); break;
+    }
+  }
+
+  function triggerHallucinationSequence() {
+    flags.foundBlood = true; const flash = document.getElementById('flash'); flash.style.opacity = '0.7'; setTimeout(() => flash.style.opacity = '0', 300);
+    player.position.set(0, player.height - 1.0, -2); player.pitch = -0.45;
+    showSubtitle("...Ты приходишь в себя на полу. Под тобой — лужа крови. Твоя рука... она полностью красная. Ты хватаешь тряпку и начинаешь оттирать пол.");
+    hasCloth = true; updateInventoryUI();
+    const bloodFloor = new THREE.Mesh(new THREE.CircleGeometry(1.5, 24), MAT.blood); bloodFloor.rotation.x = -Math.PI/2; bloodFloor.position.set(0, 0.012, -2); worldGroup.add(bloodFloor);
+    currentObjective = "Помыть пол и руки"; updateHUD();
+    setTimeout(() => { showSubtitle("Ты трёшь пол, но кровь будто появляется снова. Ты идёшь к раковине, чтобы помыть руку."); currentObjective = "Помыть руку в раковине"; updateHUD(); }, 5000);
+  }
+
+  function startKGBEvent() {
+    flags.kgbStarted = true;
+    showSubtitle("Стук в дверь. «Откройте! КГБ! Ордер на досмотр!» — «Поступил донос от гражданина Гниды...»");
+    setTimeout(() => { showSubtitle("Если увидят красную руку — либо убьют, либо запрут на карантин. Остаётся только трещина..."); currentObjective = "Бежать к трещине в стене"; updateHUD(); const crackEscape = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 0.4), new THREE.MeshBasicMaterial({ visible:false })); crackEscape.position.set(0, 1.2, -4.5); crackEscape.userData = { type: 'escapeTrench', label: 'Залезть в трещину' }; worldGroup.add(crackEscape); interactables.push(crackEscape); interactables = interactables.filter(o => o.userData.type !== 'crack'); }, 4500);
+  }
+
+  // ===== ПЕРЕХОД В АКТ 2 =====
+  function triggerEnding() {
+    gameState = STATE.ENDING; document.exitPointerLock();
+    document.getElementById('fade').style.opacity = '1';
+    setTimeout(() => {
+      document.getElementById('act1-ui').style.display = 'none';
+      document.getElementById('c-act1').style.display = 'none';
+      document.getElementById('fade').style.opacity = '0';
+      
+      // Запускаем второй акт
+      startAct2();
+    }, 2000);
+  }
+
+  function showSubtitle(text) { const s = document.getElementById('subtitle'); s.textContent = text; s.style.opacity = '1'; clearTimeout(s._t); s._t = setTimeout(() => s.style.opacity = '0', 7500); }
+  function updateHUD() { document.getElementById('objective').textContent = 'Цель: ' + currentObjective; }
+  function updateInventoryUI() { document.getElementById('slot0').classList.toggle('active', hasMic); document.getElementById('slot1').classList.toggle('active', hasCloth); document.getElementById('slot2').classList.toggle('active', hasGloves); }
+
+  const miniCtx = document.getElementById('minimap').getContext('2d');
+  const miniCanvas = document.getElementById('minimap');
+  let minimapTimer = 0;
+  function drawMinimap() {
+    const W = miniCanvas.width, H = miniCanvas.height; const cx = W/2, cy = H/2; const viewRange = 40; const scale = (W/2) / viewRange;
+    miniCtx.clearRect(0, 0, W, H); miniCtx.fillStyle = 'rgba(10,10,15,0.85)'; miniCtx.fillRect(0, 0, W, H);
+    miniCtx.strokeStyle = 'rgba(60,60,80,0.3)'; miniCtx.lineWidth = 0.5; const gridSize = 5; const gridPx = gridSize * scale;
+    const offsetX = (-player.position.x % gridSize) * scale + (Math.floor(player.position.x / gridSize) * 0); const offsetZ = (-player.position.z % gridSize) * scale;
+    for (let i = -20; i <= 20; i++) { const px = cx + (i * gridPx) + offsetX; const py = cy + (i * gridPx) + offsetZ; if (px >= 0 && px <= W) { miniCtx.beginPath(); miniCtx.moveTo(px, 0); miniCtx.lineTo(px, H); miniCtx.stroke(); } if (py >= 0 && py <= H) { miniCtx.beginPath(); miniCtx.moveTo(0, py); miniCtx.lineTo(W, py); miniCtx.stroke(); } }
+    function w2m(wx, wz) { return { x: cx + (wx - player.position.x) * scale, y: cy + (wz - player.position.z) * scale }; }
+    miniCtx.save();
+    for (const box of colliders) {
+      const w = box.max.x - box.min.x; const d = box.max.z - box.min.z; if (w < 0.2 || d < 0.2) continue;
+      const p1 = w2m(box.min.x, box.min.z); const p2 = w2m(box.max.x, box.max.z); const screenW = (p2.x - p1.x); const screenH = (p2.y - p1.y);
+      if (p1.x > W + 20 || p2.x < -20 || p1.y > H + 20 || p2.y < -20) continue;
+      if (w > 8 && d > 8) { miniCtx.fillStyle = 'rgba(80,80,100,0.7)'; miniCtx.strokeStyle = 'rgba(120,120,150,0.9)'; } else if (w > 1 && w < 3 && d > 2) { miniCtx.fillStyle = 'rgba(130,60,60,0.8)'; miniCtx.strokeStyle = 'rgba(180,80,80,0.9)'; } else { miniCtx.fillStyle = 'rgba(60,60,70,0.6)'; miniCtx.strokeStyle = 'rgba(90,90,110,0.8)'; }
+      miniCtx.fillRect(p1.x, p1.y, screenW, screenH); miniCtx.lineWidth = 1; miniCtx.strokeRect(p1.x, p1.y, screenW, screenH);
+    }
+    miniCtx.restore();
+    if (window._stopPos && gameState === STATE.ESCAPE) {
+      const sp = w2m(window._stopPos.x, window._stopPos.z);
+      if (sp.x > -10 && sp.x < W+10 && sp.y > -10 && sp.y < H+10) { miniCtx.save(); miniCtx.fillStyle = 'rgba(255,200,0,0.95)'; miniCtx.strokeStyle = 'rgba(255,255,0,0.6)'; miniCtx.lineWidth = 2; miniCtx.beginPath(); miniCtx.arc(sp.x, sp.y, 5, 0, Math.PI*2); miniCtx.fill(); miniCtx.stroke(); const pulse = 6 + Math.sin(Date.now()*0.005) * 3; miniCtx.beginPath(); miniCtx.arc(sp.x, sp.y, pulse, 0, Math.PI*2); miniCtx.strokeStyle = 'rgba(255,200,0,0.4)'; miniCtx.lineWidth = 1; miniCtx.stroke(); miniCtx.restore(); } else { const ang = Math.atan2(sp.y - cy, sp.x - cx); const edgeX = cx + Math.cos(ang) * (W/2 - 12); const edgeY = cy + Math.sin(ang) * (H/2 - 12); miniCtx.save(); miniCtx.translate(edgeX, edgeY); miniCtx.rotate(ang); miniCtx.fillStyle = 'rgba(255,200,0,0.95)'; miniCtx.beginPath(); miniCtx.moveTo(8, 0); miniCtx.lineTo(-5, -5); miniCtx.lineTo(-5, 5); miniCtx.closePath(); miniCtx.fill(); miniCtx.restore(); }
+    }
+    miniCtx.save(); miniCtx.translate(cx, cy); miniCtx.rotate(-player.yaw + Math.PI); miniCtx.fillStyle = 'rgba(100,220,100,0.95)'; miniCtx.strokeStyle = 'rgba(150,255,150,1)'; miniCtx.lineWidth = 1.5; miniCtx.beginPath(); miniCtx.moveTo(0, -7); miniCtx.lineTo(-5, 5); miniCtx.lineTo(5, 5); miniCtx.closePath(); miniCtx.fill(); miniCtx.stroke(); miniCtx.restore();
+    miniCtx.fillStyle = 'rgba(255,255,255,0.6)'; miniCtx.beginPath(); miniCtx.arc(cx, cy, 1.5, 0, Math.PI*2); miniCtx.fill();
+    miniCtx.strokeStyle = 'rgba(100,100,120,0.5)'; miniCtx.lineWidth = 1; miniCtx.strokeRect(0, 0, W, H);
+    miniCtx.fillStyle = 'rgba(150,150,170,0.6)'; miniCtx.font = '9px monospace'; miniCtx.fillText(`X:${player.position.x.toFixed(0)} Z:${player.position.z.toFixed(0)}`, 4, 12);
+  }
+
+  const clock = new THREE.Clock();
+  function updatePlayer(dt) {
+    if (!player.canMove || gameState === STATE.MENU || gameState === STATE.ENDING) return;
+    const running = keys['ShiftLeft'] || keys['ShiftRight']; const speed = running ? player.runSpeed : player.speed;
+    const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); const right = new THREE.Vector3( Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+    const move = new THREE.Vector3();
+    if (keys['KeyW'] || keys['ArrowUp']) move.add(forward); if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward); if (keys['KeyA'] || keys['ArrowLeft']) move.sub(right); if (keys['KeyD'] || keys['ArrowRight']) move.add(right);
+    const moving = move.length() > 0;
+    if (moving) { move.normalize().multiplyScalar(speed * dt); player.position.x += move.x; resolveCollisions(player.position, player.radius); player.position.z += move.z; resolveCollisions(player.position, player.radius); player.bob += dt * (running ? 14 : 9); } else { player.bob += dt * 2; }
+    if (gameState === STATE.APARTMENT) { player.position.x = Math.max(-5.4, Math.min(5.4, player.position.x)); player.position.z = Math.max(-4.4, Math.min(4.4, player.position.z)); }
+    const bobY = moving ? Math.sin(player.bob) * 0.025 : 0; const bobX = moving ? Math.cos(player.bob*0.5) * 0.012 : 0;
+    camera.position.set(player.position.x + bobX, player.position.y + bobY, player.position.z); camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
+    if (viewmodelGroup) { viewmodelGroup.position.x = -bobX * 1.5; viewmodelGroup.position.y = -bobY * 1.2; }
+  }
+
+  function updateInteractables() {
+    if (gameState === STATE.MENU || gameState === STATE.ENDING) return;
+    raycaster.setFromCamera(new THREE.Vector2(0,0), camera); const meshes = interactables.filter(o => o.parent); const hits = raycaster.intersectObjects(meshes, false); const cross = document.getElementById('crosshair-act1');
+    if (hits.length && hits[0].distance < 4.5) { const obj = hits[0].object; if (currentInteractable !== obj) { currentInteractable = obj; cross.classList.add('active'); showSubtitle('[E] ' + (obj.userData.label || 'Взаимодействовать')); } } else { if (currentInteractable) { currentInteractable = null; cross.classList.remove('active'); } }
+  }
+
+  function updateHallucinations(dt) {
+    if (!anomaliesStarted) return; hallucinationTimer += dt; const flash = document.getElementById('flash');
+    if (Math.random() < dt * 0.6) { flash.style.opacity = (Math.random() * 0.18).toString(); setTimeout(() => flash.style.opacity = '0', 90); }
+    if (hallucinationTimer > 4 && Math.random() < dt * 2.5) { player.pitch += (Math.random()-0.5) * 0.012; }
+  }
+
+  function updateEvents(dt) {
+    if (gameState === STATE.APARTMENT) { if (flags.talkedToGnida && !flags.fixedLamp && Math.random() < dt * 0.12) { flags.fixedLamp = true; showSubtitle("Ты чинишь лампочку. Мистер Гнида пытается заглянуть под рукав: «А что это у тебя с рукой?» Ты отдёргиваешь руку и быстро возвращаешься в квартиру, запирая замок."); setTimeout(startKGBEvent, 4000); } }
+    if (gameState === STATE.ESCAPE && window._stopPos) { const d = player.position.distanceTo(window._stopPos); if (d < 5) { gameState = STATE.FOREST; buildForest(); showSubtitle("Ты добираешься до остановки. Но чувствуешь слабость... Ты спускаешься в канаву и теряешь сознание."); currentObjective = "Дойти до остановки в лесу"; updateHUD(); } }
+    if (gameState === STATE.FOREST) { const d = player.position.distanceTo(new THREE.Vector3(0, 1, -30)); if (d < 6) triggerEnding(); if (Math.random() < dt * 0.35) { health -= 1; updateHealthUI(); if (health <= 0) { health = 1; updateHealthUI(); } } }
+  }
+
+  window.act1Loop = function() {
+    if (!act1Active) return;
+    requestAnimationFrame(window.act1Loop);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    if (gameState !== STATE.MENU && gameState !== STATE.ENDING) {
+      updatePlayer(dt); updateInteractables(); updateHallucinations(dt); updateEvents(dt);
+      minimapTimer += dt; if (minimapTimer > 0.066) { minimapTimer = 0; drawMinimap(); }
+    }
+    renderer.render(scene, camera);
+  }
+
+  buildApartment(); camera.position.copy(player.position); camera.rotation.y = player.yaw; camera.rotation.x = player.pitch; renderer.render(scene, camera);
+
+  let menuYaw = player.yaw;
+  function menuLoop() {
+    if (gameState === STATE.MENU) { menuYaw += 0.0012; camera.rotation.y = menuYaw; requestAnimationFrame(menuLoop); renderer.render(scene, camera); }
+  }
+  menuLoop();
+
+  document.getElementById('start-btn').addEventListener('click', () => {
+    if (gameStarted) return; gameStarted = true;
+    document.getElementById('start-screen').style.display = 'none'; gameState = STATE.APARTMENT; buildViewmodel(); buildApartment(); updateHUD(); updateInventoryUI();
+    document.getElementById('minimap-container').style.display = 'block';
+    showSubtitle("Ты в своей квартире. За окном — серое небо 90-х. Ты замечаешь трещину в стене. Слышен странный гул...");
+    clock.getDelta(); drawMinimap(); window.act1Loop();
+  });
+
+  window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+})();
+</script>
+
+
+<!-- ================= КОД АКТА 2 (RAYCASTER) ================= -->
+<script>
+function startAct2() {
+  // Скрываем все элементы Акта 1
+  document.getElementById('act1-ui').style.display = 'none';
+  document.getElementById('c-act1').style.display = 'none';
+  act1Active = false; // Останавливаем рендер Акта 1
+  
+  // Показываем Акт 2
+  document.getElementById('act2-ui').style.display = 'block';
+  document.getElementById('c-act2').style.display = 'block';
+  
+  setTimeout(() => {
+    initAct2Game();
+  }, 500);
+}
+
+function initAct2Game() {
+  const cv = document.getElementById('c-act2');
   const ctx = cv.getContext('2d');
   
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (isMobile) {
     document.body.classList.add('mobile');
-    document.getElementById('desktopControls').style.display = 'none';
-    document.getElementById('mobileControlsText').style.display = 'inline';
+    document.getElementById('controls-info').style.display = 'none';
   }
 
-  const elSanity = document.getElementById('sanity');
-  const elFound = document.getElementById('found');
-  const elObjective = document.getElementById('objective');
-  const elSubs = document.getElementById('subs');
-  const elTitle = document.getElementById('title');
-  const elEnd = document.getElementById('end');
-  const elEndTitle = document.getElementById('endTitle');
-  const elEndText = document.getElementById('endText');
-  const elRiftPrompt = document.getElementById('riftPrompt');
+  const elSanity = document.getElementById('act2-sanity');
+  const elFound = document.getElementById('act2-found');
+  const elObjective = document.getElementById('act2-objective');
+  const elSubs = document.getElementById('act2-subs');
+  const elRiftPrompt = document.getElementById('act2-riftPrompt');
   
-  const elInventory = document.getElementById('inventory');
+  const elInventory = document.getElementById('act2-inventory');
   const elInvFlashlight = document.getElementById('invFlashlight');
   const elInvCassette = document.getElementById('invCassette');
   const elInvCassette2 = document.getElementById('invCassette2');
-  const elBatteryLevel = document.getElementById('batteryLevel');
-  const elFlashlightStatus = document.getElementById('flashlightStatus');
+  const elBatteryLevel = document.getElementById('act2-batteryLevel');
+  const elFlashlightStatus = document.getElementById('act2-flashlightStatus');
   
   const elCassettePlayer = document.getElementById('cassettePlayer');
   const elCassetteTitle = document.getElementById('cassetteTitle');
   const elCassetteText = document.getElementById('cassetteText');
   const elContinueBtn = document.getElementById('continueBtn');
-  const audio1 = document.getElementById('cassetteAudio');
-  const audio2 = document.getElementById('cassetteAudio2');
-  const audio3 = document.getElementById('cassetteAudio3');
-
+  
   const elKeypadUI = document.getElementById('keypadUI');
   const elKeypadScreen = document.getElementById('keypadScreen');
+  const elEndScreen = document.getElementById('end-screen');
+  const elEndText = document.getElementById('end-text');
 
   // --- ГЕНЕРАТОР ЗВУКОВ ---
   let audioCtx = null;
@@ -243,141 +738,65 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  let ambientStarted = false;
-  function startAmbientMusic() {
-    if (!audioCtx || ambientStarted) return;
-    ambientStarted = true;
-
-    let masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.08; 
-    masterGain.connect(audioCtx.destination);
-
-    let drone1 = audioCtx.createOscillator();
-    drone1.type = 'sine';
-    drone1.frequency.value = 50; 
-    let drone2 = audioCtx.createOscillator();
-    drone2.type = 'triangle';
-    drone2.frequency.value = 51; 
-
-    let droneGain = audioCtx.createGain();
-    droneGain.gain.value = 0.5;
-
-    drone1.connect(droneGain);
-    drone2.connect(droneGain);
-    droneGain.connect(masterGain);
-
-    let lfo = audioCtx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.1; 
-
-    let lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = 0.3; 
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(droneGain.gain); 
-
-    let bufferSize = audioCtx.sampleRate * 5; 
-    let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    let data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-
-    let noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-    noise.loop = true;
-
-    let filter = audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 200; 
-
-    let noiseGain = audioCtx.createGain();
-    noiseGain.gain.value = 0.15;
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(masterGain);
-
-    drone1.start();
-    drone2.start();
-    lfo.start();
-    noise.start();
-  }
-  
   function playTone(freq, type, duration, vol) {
     if (!audioCtx) return;
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration);
   }
 
   function playFootstep(isSprint) {
     if (!audioCtx) return;
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    let freq = 60 + Math.random() * 20;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(isSprint ? 0.4 : 0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+    osc.type = 'triangle'; let freq = 60 + Math.random() * 20;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(isSprint ? 0.4 : 0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
   }
 
   let lastMonsterSound = 0;
   function playMonsterGrowl() {
-    initAudio();
-    if (state.time - lastMonsterSound < 1.5) return;
-    lastMonsterSound = state.time;
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(40, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.5);
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.5);
+    initAudio(); if (state.time - lastMonsterSound < 1.5) return; lastMonsterSound = state.time;
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
   }
 
-  function playClick() {
-    initAudio();
-    playTone(600, 'square', 0.1, 0.05);
-  }
+  function playClick() { initAudio(); playTone(600, 'square', 0.1, 0.05); }
 
   function playTransition() {
-    initAudio();
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.5);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 1.5);
+    initAudio(); let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.5);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 1.5);
   }
 
   let lastSanitySound = 0;
   function playSanityWarning() {
-    initAudio();
-    if (state.time - lastSanitySound < 2) return;
-    lastSanitySound = state.time;
-    playTone(150, 'sine', 0.5, 0.15);
+    initAudio(); if (state.time - lastSanitySound < 2) return; lastSanitySound = state.time; playTone(150, 'sine', 0.5, 0.15);
+  }
+
+  // --- ФОНОВАЯ МУЗЫКА ---
+  let ambientStarted = false;
+  function startAmbientMusic() {
+    if (!audioCtx || ambientStarted) return; ambientStarted = true;
+    let masterGain = audioCtx.createGain(); masterGain.gain.value = 0.08; masterGain.connect(audioCtx.destination);
+    let drone1 = audioCtx.createOscillator(); drone1.type = 'sine'; drone1.frequency.value = 50; 
+    let drone2 = audioCtx.createOscillator(); drone2.type = 'triangle'; drone2.frequency.value = 51; 
+    let droneGain = audioCtx.createGain(); droneGain.gain.value = 0.5;
+    drone1.connect(droneGain); drone2.connect(droneGain); droneGain.connect(masterGain);
+    let lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.1; 
+    let lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.3; 
+    lfo.connect(lfoGain); lfoGain.connect(droneGain.gain); 
+    let bufferSize = audioCtx.sampleRate * 5; let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); let data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    let noise = audioCtx.createBufferSource(); noise.buffer = buffer; noise.loop = true;
+    let filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 200; 
+    let noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.15;
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+    drone1.start(); drone2.start(); lfo.start(); noise.start();
   }
 
   const map1 = [
@@ -421,53 +840,26 @@
   let currentMap = map1;
 
   const state = {
-    running: false,
-    level: 1,
-    sanity: 100,
-    found: 0,
-    time: 0,
-    hasFlashlight: false,
-    isFlashlightOn: false,
-    hasCassette1: false,
-    hasCassette2: false,
-    gateActive: false,
-    cassette3Played: false,
-    battery: 100,
-    stepTimer: 0,
+    running: false, level: 1, sanity: 100, found: 0, time: 0,
+    hasFlashlight: false, isFlashlightOn: false, hasCassette1: false, hasCassette2: false,
+    gateActive: false, cassette3Played: false, battery: 100, stepTimer: 0,
     player: { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 },
-    keys: {},
-    anomalies: [],
+    keys: {}, anomalies: [],
     rift: { x: 8.5, y: 1.5, active: false },
     locker: { x: 3.5, y: 3.5, active: false },
     cassette: { x: 11.5, y: 14.5, active: false },
     gate: { x: 14.5, y: 14.5 },
     monster: { x: 0, y: 0, active: false, speed: 2.5 },
-    keypadInput: "",
-    keypadActive: false,
-    msgT: 0,
-    currentAudio: null,
-    currentCassetteType: 0
+    keypadInput: "", keypadActive: false, msgT: 0, currentAudio: null, currentCassetteType: 0
   };
 
-  function resize() {
-    cv.width = window.innerWidth;
-    cv.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
+  function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
 
   function buildLevel1() {
-    currentMap = map1;
-    state.level = 1;
-    state.sanity = 100;
-    state.found = 0;
-    state.hasFlashlight = false;
-    state.isFlashlightOn = false;
-    state.hasCassette1 = false;
-    state.hasCassette2 = false;
-    state.gateActive = false;
-    state.cassette3Played = false;
-    state.battery = 100;
+    currentMap = map1; state.level = 1; state.sanity = 100; state.found = 0;
+    state.hasFlashlight = false; state.isFlashlightOn = false; state.hasCassette1 = false; state.hasCassette2 = false;
+    state.gateActive = false; state.cassette3Played = false; state.battery = 100;
     state.player = { x: 8.5, y: 8.5, angle: 0, speed: 3.5, r: 0.2 };
     state.anomalies = [
       { x: 2.5, y: 1.5, name: 'Лампа без источника', found: false },
@@ -476,36 +868,22 @@
       { x: 14.5, y: 14.5, name: 'Тень под потолком', found: false },
       { x: 5.5, y: 4.5, name: 'Дверь в никуда', found: false }
     ];
-    state.rift.active = false;
-    state.locker.active = false;
-    state.cassette.active = false;
-    state.monster.active = false;
-    state.keypadActive = false;
-    elKeypadUI.style.display = 'none';
-    elFound.style.display = 'inline';
-    elInventory.style.display = 'none';
-    elInvFlashlight.style.display = 'none';
-    elInvCassette.style.display = 'none';
-    elInvCassette2.style.display = 'none';
+    state.rift.active = false; state.locker.active = false; state.cassette.active = false;
+    state.monster.active = false; state.keypadActive = false;
+    elKeypadUI.style.display = 'none'; elFound.style.display = 'inline';
+    elInventory.style.display = 'none'; elInvFlashlight.style.display = 'none'; elInvCassette.style.display = 'none'; elInvCassette2.style.display = 'none';
     elObjective.textContent = 'СОБЕРИ 5 АНОМАЛИЙ';
   }
 
   function buildLevel2() {
-    playTransition();
-    currentMap = map2;
-    state.level = 2;
-    state.sanity = 100;
+    playTransition(); currentMap = map2; state.level = 2; state.sanity = 100;
     state.player = { x: 1.5, y: 1.5, angle: 0, speed: 3.5, r: 0.2 };
-    state.anomalies = [];
-    state.rift.active = false;
+    state.anomalies = []; state.rift.active = false;
     state.locker = { x: 3.5, y: 3.5, active: false };
     state.cassette = { x: 11.5, y: 14.5, active: true };
     state.monster = { x: 0, y: 0, active: false, speed: 2.0 };
-    state.gateActive = false;
-    state.cassette3Played = false;
-    state.keypadActive = false;
-    elKeypadUI.style.display = 'none';
-    elFound.style.display = 'none';
+    state.gateActive = false; state.cassette3Played = false; state.keypadActive = false;
+    elKeypadUI.style.display = 'none'; elFound.style.display = 'none';
     elObjective.textContent = 'НАЙДИ КАССЕТУ';
     say('Уровень 2. Доктор сказал про кассету...', 5);
   }
@@ -520,34 +898,19 @@
     return false;
   }
 
-  function say(text, dur) {
-    elSubs.textContent = text;
-    state.msgT = dur || 3;
-  }
+  function say(text, dur) { elSubs.textContent = text; state.msgT = dur || 3; }
 
   function castRay(rayAngle) {
-    let rayDirX = Math.cos(rayAngle);
-    let rayDirY = Math.sin(rayAngle);
-    
-    if (rayDirX === 0) rayDirX = 0.000001;
-    if (rayDirY === 0) rayDirY = 0.000001;
-
-    let mapX = Math.floor(state.player.x);
-    let mapY = Math.floor(state.player.y);
-
-    let deltaDistX = Math.abs(1 / rayDirX);
-    let deltaDistY = Math.abs(1 / rayDirY);
+    let rayDirX = Math.cos(rayAngle); let rayDirY = Math.sin(rayAngle);
+    if (rayDirX === 0) rayDirX = 0.000001; if (rayDirY === 0) rayDirY = 0.000001;
+    let mapX = Math.floor(state.player.x); let mapY = Math.floor(state.player.y);
+    let deltaDistX = Math.abs(1 / rayDirX); let deltaDistY = Math.abs(1 / rayDirY);
     let stepX, stepY, sideDistX, sideDistY;
-
-    if (rayDirX < 0) { stepX = -1; sideDistX = (state.player.x - mapX) * deltaDistX; }
-    else { stepX = 1; sideDistX = (mapX + 1.0 - state.player.x) * deltaDistX; }
-    if (rayDirY < 0) { stepY = -1; sideDistY = (state.player.y - mapY) * deltaDistY; }
-    else { stepY = 1; sideDistY = (mapY + 1.0 - state.player.y) * deltaDistY; }
-
+    if (rayDirX < 0) { stepX = -1; sideDistX = (state.player.x - mapX) * deltaDistX; } else { stepX = 1; sideDistX = (mapX + 1.0 - state.player.x) * deltaDistX; }
+    if (rayDirY < 0) { stepY = -1; sideDistY = (state.player.y - mapY) * deltaDistY; } else { stepY = 1; sideDistY = (mapY + 1.0 - state.player.y) * deltaDistY; }
     let hit = 0, side = 0, maxSteps = 50;
     while (hit === 0 && maxSteps > 0) {
-      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
-      else { sideDistY += deltaDistY; mapY += stepY; side = 1; }
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; } else { sideDistY += deltaDistY; mapY += stepY; side = 1; }
       if (currentMap[mapY] && currentMap[mapY][mapX] === 1) hit = 1;
       maxSteps--;
     }
@@ -562,581 +925,199 @@
   const cassetteMessage3 = "Отлично, ты нашел шлюз. Это последняя запись. Введи код 5-0-5 на панели, и дверь откроется. За ней — безопасная зона. Я жду тебя там. И пожалуйста, не оборачивайся.";
 
   function playCassette(type) {
-    playClick();
-    state.running = false;
-    state.currentCassetteType = type;
-    if (!isMobile) document.exitPointerLock();
-    elRiftPrompt.style.opacity = 0;
-    elCassettePlayer.style.display = 'flex';
-    elCassetteText.textContent = '';
-    elContinueBtn.style.display = 'none';
-    
-    let textToType = "";
-    state.currentAudio = null;
-    
-    if (type === 1) {
-      textToType = cassetteMessage1;
-      state.currentAudio = audio1;
-      elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 1...';
-    } else if (type === 2) {
-      textToType = cassetteMessage2;
-      state.currentAudio = audio2;
-      elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 2...';
-    } else if (type === 3) {
-      textToType = cassetteMessage3;
-      state.currentAudio = audio3;
-      elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 3...';
-    }
-
-    if (state.currentAudio) {
-      state.currentAudio.currentTime = 0;
-      state.currentAudio.play().catch(e => {
-        console.log("Браузер заблокировал звук кассеты:", e);
-      });
-    }
-
-    let i = 0;
-    clearInterval(typeTimer);
+    playClick(); state.running = false; state.currentCassetteType = type; if (!isMobile) document.exitPointerLock();
+    elRiftPrompt.style.opacity = 0; elCassettePlayer.style.display = 'flex'; elCassetteText.textContent = ''; elContinueBtn.style.display = 'none';
+    let textToType = ""; state.currentAudio = null;
+    if (type === 1) { textToType = cassetteMessage1; state.currentAudio = document.getElementById('cassetteAudio'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 1...'; }
+    else if (type === 2) { textToType = cassetteMessage2; state.currentAudio = document.getElementById('cassetteAudio2'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 2...'; }
+    else if (type === 3) { textToType = cassetteMessage3; state.currentAudio = document.getElementById('cassetteAudio3'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 3...'; }
+    if (state.currentAudio) { state.currentAudio.currentTime = 0; state.currentAudio.play().catch(e => console.log(e)); }
+    let i = 0; clearInterval(typeTimer);
     typeTimer = setInterval(() => {
-      if (i < textToType.length) {
-        elCassetteText.textContent += textToType.charAt(i);
-        i++;
-      } else {
-        clearInterval(typeTimer);
-        elContinueBtn.style.display = 'block';
-      }
+      if (i < textToType.length) { elCassetteText.textContent += textToType.charAt(i); i++; } 
+      else { clearInterval(typeTimer); elContinueBtn.style.display = 'block'; }
     }, 40);
   }
 
-  // --- КОДОВАЯ ПАНЕЛЬ ---
-  window.pressKey = function(num) {
-    playClick();
-    if (state.keypadInput.length < 3) {
-      state.keypadInput += num;
-      updateKeypadScreen();
-    }
-  };
-
-  window.clearKeypad = function() {
-    playClick();
-    state.keypadInput = "";
-    updateKeypadScreen();
-  };
-
+  window.pressKey = function(num) { playClick(); if (state.keypadInput.length < 3) { state.keypadInput += num; updateKeypadScreen(); } };
+  window.clearKeypad = function() { playClick(); state.keypadInput = ""; updateKeypadScreen(); };
   window.submitKeypad = function() {
     playClick();
-    if (state.keypadInput === "505") {
-      elKeypadUI.style.display = 'none';
-      if (!isMobile) document.exitPointerLock();
-      finish(true);
-    } else {
-      elKeypadScreen.style.color = '#ff0000';
-      elKeypadScreen.textContent = 'ОШИБКА';
-      playTone(100, 'sawtooth', 0.5, 0.2);
-      setTimeout(() => {
-        state.keypadInput = "";
-        updateKeypadScreen();
-      }, 1000);
-    }
+    if (state.keypadInput === "505") { elKeypadUI.style.display = 'none'; if (!isMobile) document.exitPointerLock(); triggerAct2Ending(); } 
+    else { elKeypadScreen.style.color = '#ff0000'; elKeypadScreen.textContent = 'ОШИБКА'; playTone(100, 'sawtooth', 0.5, 0.2); setTimeout(() => { state.keypadInput = ""; updateKeypadScreen(); }, 1000); }
   };
-
-  function updateKeypadScreen() {
-    elKeypadScreen.style.color = '#00ff00';
-    let display = state.keypadInput.padEnd(3, '_').split('').join(' ');
-    elKeypadScreen.textContent = display;
-  }
-
-  function toggleFlashlight() {
-    if (state.hasFlashlight && state.battery > 0) {
-      state.isFlashlightOn = !state.isFlashlightOn;
-      playClick();
-      elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ';
-      say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2);
-    }
-  }
+  function updateKeypadScreen() { elKeypadScreen.style.color = '#00ff00'; elKeypadScreen.textContent = state.keypadInput.padEnd(3, '_').split('').join(' '); }
+  function toggleFlashlight() { if (state.hasFlashlight && state.battery > 0) { state.isFlashlightOn = !state.isFlashlightOn; playClick(); elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ'; say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2); } }
 
   function update(dt) {
     if (!state.running) return;
-    
-    if (isNaN(state.player.angle)) state.player.angle = 0;
-    if (isNaN(state.player.x)) state.player.x = 8.5;
-    if (isNaN(state.player.y)) state.player.y = 8.5;
-    
+    if (isNaN(state.player.angle)) state.player.angle = 0; if (isNaN(state.player.x)) state.player.x = 8.5; if (isNaN(state.player.y)) state.player.y = 8.5;
     state.time += dt;
-
     let p = state.player, k = state.keys;
-    
     let sprint = k.shift && (k.up || k.down || k.left || k.right);
     let moveSpeed = p.speed * dt * (sprint ? 1.8 : 1);
-
     let dx = 0, dy = 0;
-    
     if (k.up) { dx += Math.cos(p.angle); dy += Math.sin(p.angle); }
     if (k.down) { dx -= Math.cos(p.angle); dy -= Math.sin(p.angle); }
     if (k.left) { dx += Math.cos(p.angle - Math.PI/2); dy += Math.sin(p.angle - Math.PI/2); }
     if (k.right) { dx += Math.cos(p.angle + Math.PI/2); dy += Math.sin(p.angle + Math.PI/2); }
-
     if (dx !== 0 || dy !== 0) {
-      if (state.stepTimer > 0) {
-        state.stepTimer -= dt;
-      } else {
-        playFootstep(sprint);
-        state.stepTimer = sprint ? 0.3 : 0.5;
-      }
-
+      if (state.stepTimer > 0) state.stepTimer -= dt; else { playFootstep(sprint); state.stepTimer = sprint ? 0.3 : 0.5; }
       let len = Math.hypot(dx, dy);
-      if (len > 0) {
-        dx = (dx / len) * moveSpeed;
-        dy = (dy / len) * moveSpeed;
-        
-        let nx = p.x + dx;
-        let ny = p.y + dy;
-        if (!collide(nx, p.y)) p.x = nx;
-        if (!collide(p.x, ny)) p.y = ny;
-      }
-    } else {
-      state.stepTimer = 0;
-    }
+      if (len > 0) { dx = (dx / len) * moveSpeed; dy = (dy / len) * moveSpeed; let nx = p.x + dx; let ny = p.y + dy; if (!collide(nx, p.y)) p.x = nx; if (!collide(p.x, ny)) p.y = ny; }
+    } else state.stepTimer = 0;
 
-    // ЛОГИКА МОНСТРА
     if (state.monster.active) {
-      let m = state.monster;
-      let angleToPlayer = Math.atan2(p.y - m.y, p.x - m.x);
-      
-      if (!isNaN(angleToPlayer)) {
-        m.x += Math.cos(angleToPlayer) * m.speed * dt;
-        m.y += Math.sin(angleToPlayer) * m.speed * dt;
-      }
-
+      let m = state.monster; let angleToPlayer = Math.atan2(p.y - m.y, p.x - m.x);
+      if (!isNaN(angleToPlayer)) { m.x += Math.cos(angleToPlayer) * m.speed * dt; m.y += Math.sin(angleToPlayer) * m.speed * dt; }
       playMonsterGrowl();
-
-      if (Math.hypot(p.x - m.x, p.y - m.y) < 0.6) {
-        state.running = false;
-        if (!isMobile) document.exitPointerLock();
-        finish(false);
-      }
+      if (Math.hypot(p.x - m.x, p.y - m.y) < 0.6) { state.running = false; if (!isMobile) document.exitPointerLock(); triggerAct2Fail(); }
     }
 
-    let decay = state.level === 1 ? 0.6 : 1.2;
-    if (sprint) decay += 1.8;
-
-    // ЛОГИКА БАТАРЕЙКИ
+    let decay = state.level === 1 ? 0.6 : 1.2; if (sprint) decay += 1.8;
     if (state.hasFlashlight) {
-      if (state.isFlashlightOn && state.battery > 0) {
-        state.battery -= 0.5 * dt;
-        if (state.battery <= 0) {
-          state.battery = 0;
-          state.isFlashlightOn = false;
-          elFlashlightStatus.textContent = 'ВЫКЛ';
-          say('Батарейка села...', 3);
-        }
-        elBatteryLevel.textContent = Math.floor(state.battery);
-      } else if (state.battery <= 0) {
-        decay += 2.0; 
-      } else if (!state.isFlashlightOn) {
-        decay += 1.0; 
-      }
+      if (state.isFlashlightOn && state.battery > 0) { state.battery -= 0.5 * dt; if (state.battery <= 0) { state.battery = 0; state.isFlashlightOn = false; elFlashlightStatus.textContent = 'ВЫКЛ'; say('Батарейка села...', 3); } elBatteryLevel.textContent = Math.floor(state.battery); } 
+      else if (state.battery <= 0) decay += 2.0; else if (!state.isFlashlightOn) decay += 1.0;
     }
-    
+
     if (state.level === 1) {
       for (let i = 0; i < state.anomalies.length; i++) {
-        let a = state.anomalies[i];
-        if (a.found) continue;
-        let dist = Math.hypot(a.x - p.x, a.y - p.y);
-        if (dist < 3) decay += (3 - dist) * 2.0;
-        
-        if (dist < 1.5 && k.e) {
-          k.e = false;
-          playClick();
-          a.found = true;
-          state.found++;
-          elFound.textContent = state.found;
-          say('Зафиксировано: ' + a.name, 3);
-          state.sanity = Math.min(100, state.sanity + 6);
-          
-          if (state.found === 5) {
-            state.rift.active = true;
-            say('Связь установлена. Трещина открыта.', 5);
-          }
-        }
+        let a = state.anomalies[i]; if (a.found) continue;
+        let dist = Math.hypot(a.x - p.x, a.y - p.y); if (dist < 3) decay += (3 - dist) * 2.0;
+        if (dist < 1.5 && k.e) { k.e = false; playClick(); a.found = true; state.found++; elFound.textContent = state.found; say('Зафиксировано: ' + a.name, 3); state.sanity = Math.min(100, state.sanity + 6); if (state.found === 5) { state.rift.active = true; say('Связь установлена. Трещина открыта.', 5); } }
       }
-
       if (state.rift.active) {
         let rDist = Math.hypot(state.rift.x - p.x, state.rift.y - p.y);
-        if (rDist < 1.5) {
-          elRiftPrompt.style.opacity = 1;
-          if (k.e) {
-            k.e = false;
-            buildLevel2();
-          }
-        } else {
-          elRiftPrompt.style.opacity = 0;
-        }
+        if (rDist < 1.5) { elRiftPrompt.style.opacity = 1; if (k.e) { k.e = false; buildLevel2(); } } else elRiftPrompt.style.opacity = 0;
       }
-    } 
-    else if (state.level === 2) {
+    } else if (state.level === 2) {
       let lDist = Math.hypot(state.locker.x - p.x, state.locker.y - p.y);
       if (lDist < 1.5) {
-        if (!state.locker.active) {
-          elRiftPrompt.textContent = '// шкаф заперт';
-          elRiftPrompt.style.opacity = 1;
-        } else {
-          elRiftPrompt.textContent = '// открыть шкаф';
-          elRiftPrompt.style.opacity = 1;
-          if (k.e) {
-            k.e = false;
-            state.locker.active = false;
-            state.hasFlashlight = true;
-            state.isFlashlightOn = true; 
-            state.hasCassette2 = true;
-            state.battery = 100;
-            elInventory.style.display = 'block';
-            elInvFlashlight.style.display = 'block';
-            elFlashlightStatus.textContent = 'ВКЛ';
-            elInvCassette2.style.display = 'block';
-            elBatteryLevel.textContent = '100';
-            playCassette(2);
-            elRiftPrompt.style.opacity = 0;
-          }
+        if (!state.locker.active) { elRiftPrompt.textContent = '// шкаф заперт'; elRiftPrompt.style.opacity = 1; } 
+        else {
+          elRiftPrompt.textContent = '// открыть шкаф'; elRiftPrompt.style.opacity = 1;
+          if (k.e) { k.e = false; state.locker.active = false; state.hasFlashlight = true; state.isFlashlightOn = true; state.hasCassette2 = true; state.battery = 100; elInventory.style.display = 'block'; elInvFlashlight.style.display = 'block'; elFlashlightStatus.textContent = 'ВКЛ'; elInvCassette2.style.display = 'block'; elBatteryLevel.textContent = '100'; playCassette(2); elRiftPrompt.style.opacity = 0; }
         }
-      } else {
-        if (!state.cassette.active && !state.gateActive) elRiftPrompt.style.opacity = 0;
-      }
+      } else { if (!state.cassette.active && !state.gateActive) elRiftPrompt.style.opacity = 0; }
 
       if (state.cassette.active) {
         let cDist = Math.hypot(state.cassette.x - p.x, state.cassette.y - p.y);
         if (cDist < 1.5) {
-          elRiftPrompt.textContent = '// взять кассету';
-          elRiftPrompt.style.opacity = 1;
-          if (k.e) {
-            k.e = false;
-            state.cassette.active = false;
-            state.hasCassette1 = true;
-            state.locker.active = true;
-            elInventory.style.display = 'block';
-            elInvCassette.style.display = 'block';
-            playCassette(1); 
-          }
-        } else {
-          if (!state.locker.active && !state.gateActive) {
-            elRiftPrompt.style.opacity = 0;
-          }
-        }
+          elRiftPrompt.textContent = '// взять кассету'; elRiftPrompt.style.opacity = 1;
+          if (k.e) { k.e = false; state.cassette.active = false; state.hasCassette1 = true; state.locker.active = true; elInventory.style.display = 'block'; elInvCassette.style.display = 'block'; playCassette(1); }
+        } else { if (!state.locker.active && !state.gateActive) elRiftPrompt.style.opacity = 0; }
       }
 
       if (state.gateActive) {
         let gDist = Math.hypot(state.gate.x - p.x, state.gate.y - p.y);
         if (gDist < 2.0) {
-          if (!state.cassette3Played) {
-            elRiftPrompt.textContent = '// ПРОСЛУШАТЬ ЗАПИСЬ';
-            elRiftPrompt.style.opacity = 1;
-            if (k.e) {
-              k.e = false;
-              playCassette(3);
-            }
-          } else {
-            elRiftPrompt.textContent = '// ВВЕДИТЕ КОД';
-            elRiftPrompt.style.opacity = 1;
-            if (k.e) {
-              k.e = false;
-              state.running = false; 
-              if (!isMobile) document.exitPointerLock(); 
-              elKeypadUI.style.display = 'flex';
-              state.keypadInput = "";
-              updateKeypadScreen();
-            }
-          }
-        } else {
-          elRiftPrompt.style.opacity = 0;
-        }
+          if (!state.cassette3Played) { elRiftPrompt.textContent = '// ПРОСЛУШАТЬ ЗАПИСЬ'; elRiftPrompt.style.opacity = 1; if (k.e) { k.e = false; playCassette(3); } } 
+          else { elRiftPrompt.textContent = '// ВВЕДИТЕ КОД'; elRiftPrompt.style.opacity = 1; if (k.e) { k.e = false; state.running = false; if (!isMobile) document.exitPointerLock(); elKeypadUI.style.display = 'flex'; state.keypadInput = ""; updateKeypadScreen(); } }
+        } else elRiftPrompt.style.opacity = 0;
       }
     }
 
-    state.sanity = Math.max(0, state.sanity - decay * dt);
-    if (state.sanity < 30) playSanityWarning();
-
-    if (state.sanity <= 0) return finish(false);
-
-    if (state.msgT > 0) {
-      state.msgT -= dt;
-      if (state.msgT <= 0) elSubs.textContent = '';
-    }
+    state.sanity = Math.max(0, state.sanity - decay * dt); if (state.sanity < 30) playSanityWarning();
+    if (state.sanity <= 0) { state.running = false; if (!isMobile) document.exitPointerLock(); triggerAct2Fail(); }
+    if (state.msgT > 0) { state.msgT -= dt; if (state.msgT <= 0) elSubs.textContent = ''; }
     elSanity.textContent = Math.floor(state.sanity);
   }
 
   function render() {
-    const vw = cv.width, vh = cv.height;
-    const p = state.player;
-
-    if (vw === 0 || vh === 0) return;
-
-    ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, vw, vh / 2);
-    ctx.fillStyle = '#111114'; ctx.fillRect(0, vh / 2, vw, vh / 2);
-
-    const fov = Math.PI / 3;
-    const focalLength = (vw / 2) / Math.tan(fov / 2);
-    
+    const vw = cv.width, vh = cv.height; const p = state.player; if (vw === 0 || vh === 0) return;
+    ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, vw, vh / 2); ctx.fillStyle = '#111114'; ctx.fillRect(0, vh / 2, vw, vh / 2);
+    const fov = Math.PI / 3; const focalLength = (vw / 2) / Math.tan(fov / 2);
     let isLightOn = state.hasFlashlight && state.isFlashlightOn && state.battery > 0;
 
     for (let x = 0; x < vw; x++) {
-      let rayAngle = p.angle - fov/2 + (x / vw) * fov;
-      let res = castRay(rayAngle);
-      let dist = res.dist;
-      
-      dist = dist * Math.cos(rayAngle - p.angle); 
-      if (dist < 0.1) dist = 0.1;
-
-      let wallHeight = focalLength / dist;
-      let drawStart = -wallHeight / 2 + vh / 2;
-      
-      let lightMod = state.level === 2 ? 0.6 : 1;
-      if (isLightOn && state.level === 2) lightMod = 0.85;
-
-      let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
-      let c = res.side === 0 ? 45 : 30;
-      
-      if (state.level === 2) {
-        ctx.fillStyle = `rgb(${c*shade*0.8}, ${c*shade*0.9}, ${c*shade*1.2})`;
-      } else {
-        ctx.fillStyle = `rgb(${c*shade}, ${c*shade}, ${c*shade+10})`;
-      }
+      let rayAngle = p.angle - fov/2 + (x / vw) * fov; let res = castRay(rayAngle); let dist = res.dist;
+      dist = dist * Math.cos(rayAngle - p.angle); if (dist < 0.1) dist = 0.1;
+      let wallHeight = focalLength / dist; let drawStart = -wallHeight / 2 + vh / 2;
+      let lightMod = state.level === 2 ? 0.6 : 1; if (isLightOn && state.level === 2) lightMod = 0.85;
+      let shade = Math.max(0.1, 1 - dist / 15) * lightMod; let c = res.side === 0 ? 45 : 30;
+      if (state.level === 2) ctx.fillStyle = `rgb(${c*shade*0.8}, ${c*shade*0.9}, ${c*shade*1.2})`; else ctx.fillStyle = `rgb(${c*shade}, ${c*shade}, ${c*shade+10})`;
       ctx.fillRect(x, drawStart, 1, wallHeight);
     }
 
     let renderList = [];
-    
-    if (state.level === 1) {
-      state.anomalies.forEach(a => {
-        if (!a.found) renderList.push({ type: 'anomaly', x: a.x, y: a.y, ref: a });
-      });
-      if (state.rift.active) renderList.push({ type: 'rift', x: state.rift.x, y: state.rift.y });
-    } else if (state.level === 2) {
-      if (!state.hasCassette2) renderList.push({ type: 'locker', x: state.locker.x, y: state.locker.y });
-      if (state.cassette.active) renderList.push({ type: 'cassette', x: state.cassette.x, y: state.cassette.y });
-      if (state.gateActive) renderList.push({ type: 'gate', x: state.gate.x, y: state.gate.y });
-    }
+    if (state.level === 1) { state.anomalies.forEach(a => { if (!a.found) renderList.push({ type: 'anomaly', x: a.x, y: a.y, ref: a }); }); if (state.rift.active) renderList.push({ type: 'rift', x: state.rift.x, y: state.rift.y }); } 
+    else if (state.level === 2) { if (!state.hasCassette2) renderList.push({ type: 'locker', x: state.locker.x, y: state.locker.y }); if (state.cassette.active) renderList.push({ type: 'cassette', x: state.cassette.x, y: state.cassette.y }); if (state.gateActive) renderList.push({ type: 'gate', x: state.gate.x, y: state.gate.y }); }
+    if (state.monster.active) renderList.push({ type: 'monster', x: state.monster.x, y: state.monster.y });
 
-    if (state.monster.active) {
-      renderList.push({ type: 'monster', x: state.monster.x, y: state.monster.y });
-    }
-
-    renderList = renderList.map(obj => {
-      let dx = obj.x - p.x, dy = obj.y - p.y;
-      return { ...obj, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
-    }).sort((a, b) => b.dist - a.dist);
+    renderList = renderList.map(obj => { let dx = obj.x - p.x, dy = obj.y - p.y; return { ...obj, dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) }; }).sort((a, b) => b.dist - a.dist);
 
     for (let obj of renderList) {
-      let angleDiff = obj.angle - p.angle;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
+      let angleDiff = obj.angle - p.angle; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       if (Math.abs(angleDiff) < fov / 2 + 0.5) {
-        let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength;
-        let size = focalLength / obj.dist;
-        let cy = vh / 2;
-        let rayToObj = castRay(obj.angle);
-        
+        let screenX = (vw / 2) + Math.tan(angleDiff) * focalLength; let size = focalLength / obj.dist; let cy = vh / 2; let rayToObj = castRay(obj.angle);
         if (rayToObj.dist > obj.dist || obj.type === 'monster') {
           if (obj.type === 'anomaly') {
-            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/2);
-            grad.addColorStop(0, 'rgba(0, 191, 255, 0.9)');
-            grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath(); ctx.arc(screenX, cy, size/2, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#e0ffff';
-            ctx.beginPath(); ctx.arc(screenX, cy, Math.max(2, size/20), 0, Math.PI*2); ctx.fill();
-          }
-          else if (obj.type === 'rift') {
-            let h = size * 1.5;
-            let grad = ctx.createLinearGradient(screenX, cy - h/2, screenX, cy + h/2);
-            grad.addColorStop(0, 'rgba(0, 191, 255, 0)');
-            grad.addColorStop(0.5, 'rgba(0, 191, 255, 0.9)');
-            grad.addColorStop(1, 'rgba(0, 191, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(screenX - size/30, cy - h/3, size/15, h/1.5);
-          }
-          else if (obj.type === 'locker') {
-            let h = size * 1.2;
-            ctx.fillStyle = '#4a3b2a';
-            ctx.fillRect(screenX - size/6, cy - h/2, size/3, h);
-            ctx.fillStyle = '#2a1f15';
-            ctx.fillRect(screenX - size/8, cy - h/3, size/4, h/1.5);
-            ctx.fillStyle = '#d4af37';
-            ctx.fillRect(screenX + size/20, cy, size/30, size/30);
-          }
-          else if (obj.type === 'cassette') {
-            cy += 10;
-            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/3);
-            grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
-            grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#222'; ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10);
-            ctx.fillStyle = '#ffcc00'; ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
-          }
-          else if (obj.type === 'gate') {
-            let h = size * 1.8;
-            let w = size * 0.8;
-            let pulse = Math.sin(state.time * 5) * 0.2 + 0.8;
-            
-            ctx.fillStyle = `rgba(0, 255, 0, ${0.3 * pulse})`;
-            ctx.fillRect(screenX - w/2 - 10, cy - h/2 - 10, w + 20, h + 20);
-            
-            ctx.fillStyle = '#0a2a0a';
-            ctx.fillRect(screenX - w/2, cy - h/2, w, h);
-            
-            ctx.strokeStyle = `rgba(0, 255, 0, ${pulse})`;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(screenX - w/2, cy - h/2, w, h);
-            
-            ctx.fillStyle = `rgba(0, 255, 0, ${0.5 * pulse})`;
-            ctx.fillRect(screenX - w/2 + 5, cy - h/2 + 5, w - 10, h - 10);
-          }
-          else if (obj.type === 'monster') {
-            let r = size * 0.4;
-            let pulse = Math.sin(state.time * 10) * 0.1 + 0.9;
-            
-            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, r * 2);
-            grad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`);
-            grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath(); ctx.arc(screenX, cy, r * 2, 0, Math.PI*2); ctx.fill();
-
-            ctx.fillStyle = '#ff1111';
-            ctx.beginPath(); ctx.arc(screenX, cy, r, 0, Math.PI*2); ctx.fill();
-
-            ctx.strokeStyle = '#aa0000';
-            ctx.lineWidth = Math.max(2, r * 0.15);
-            for (let t = 0; t < 3; t++) {
-              ctx.beginPath();
-              ctx.moveTo(screenX, cy);
-              let wave = Math.sin(state.time * 15 + t * 2) * r * 0.5;
-              let endX = screenX - r*1.5 + t * r * 1.5 + wave;
-              let endY = cy + r * 1.5;
-              ctx.quadraticCurveTo(screenX + wave, cy + r, endX, endY);
-              ctx.stroke();
-            }
+            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/2); grad.addColorStop(0, 'rgba(0, 191, 255, 0.9)'); grad.addColorStop(1, 'rgba(0, 191, 255, 0)'); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(screenX, cy, size/2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#e0ffff'; ctx.beginPath(); ctx.arc(screenX, cy, Math.max(2, size/20), 0, Math.PI*2); ctx.fill();
+          } else if (obj.type === 'rift') {
+            let h = size * 1.5; let grad = ctx.createLinearGradient(screenX, cy - h/2, screenX, cy + h/2); grad.addColorStop(0, 'rgba(0, 191, 255, 0)'); grad.addColorStop(0.5, 'rgba(0, 191, 255, 0.9)'); grad.addColorStop(1, 'rgba(0, 191, 255, 0)'); ctx.fillStyle = grad; ctx.fillRect(screenX - size/10, cy - h/2, size/5, h);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(screenX - size/30, cy - h/3, size/15, h/1.5);
+          } else if (obj.type === 'locker') {
+            let h = size * 1.2; ctx.fillStyle = '#4a3b2a'; ctx.fillRect(screenX - size/6, cy - h/2, size/3, h); ctx.fillStyle = '#2a1f15'; ctx.fillRect(screenX - size/8, cy - h/3, size/4, h/1.5); ctx.fillStyle = '#d4af37'; ctx.fillRect(screenX + size/20, cy, size/30, size/30);
+          } else if (obj.type === 'cassette') {
+            cy += 10; let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, size/3); grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)'); grad.addColorStop(1, 'rgba(255, 200, 0, 0)'); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(screenX, cy, size/3, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#222'; ctx.fillRect(screenX - size/15, cy - size/20, size/7.5, size/10); ctx.fillStyle = '#ffcc00'; ctx.fillRect(screenX - size/20, cy - size/30, size/10, size/30);
+          } else if (obj.type === 'gate') {
+            let h = size * 1.8; let w = size * 0.8; let pulse = Math.sin(state.time * 5) * 0.2 + 0.8;
+            ctx.fillStyle = `rgba(0, 255, 0, ${0.3 * pulse})`; ctx.fillRect(screenX - w/2 - 10, cy - h/2 - 10, w + 20, h + 20);
+            ctx.fillStyle = '#0a2a0a'; ctx.fillRect(screenX - w/2, cy - h/2, w, h);
+            ctx.strokeStyle = `rgba(0, 255, 0, ${pulse})`; ctx.lineWidth = 3; ctx.strokeRect(screenX - w/2, cy - h/2, w, h);
+            ctx.fillStyle = `rgba(0, 255, 0, ${0.5 * pulse})`; ctx.fillRect(screenX - w/2 + 5, cy - h/2 + 5, w - 10, h - 10);
+          } else if (obj.type === 'monster') {
+            let r = size * 0.4; let pulse = Math.sin(state.time * 10) * 0.1 + 0.9;
+            let grad = ctx.createRadialGradient(screenX, cy, 0, screenX, cy, r * 2); grad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`); grad.addColorStop(1, 'rgba(255, 0, 0, 0)'); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(screenX, cy, r * 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ff1111'; ctx.beginPath(); ctx.arc(screenX, cy, r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#aa0000'; ctx.lineWidth = Math.max(2, r * 0.15);
+            for (let t = 0; t < 3; t++) { ctx.beginPath(); ctx.moveTo(screenX, cy); let wave = Math.sin(state.time * 15 + t * 2) * r * 0.5; let endX = screenX - r*1.5 + t * r * 1.5 + wave; let endY = cy + r * 1.5; ctx.quadraticCurveTo(screenX + wave, cy + r, endX, endY); ctx.stroke(); }
           }
         }
       }
     }
 
     if (state.level === 2) {
-      let radius = 0.02; 
-      let darkness = 0.99; 
-      
-      if (isLightOn) {
-        radius = 1.05; 
-        darkness = 0.65; 
-      }
-      
+      let radius = 0.02; let darkness = 0.99; if (isLightOn) { radius = 1.05; darkness = 0.65; }
       let flGrad = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*radius, vw/2, vh/2, Math.max(vw,vh)*0.7);
-      flGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      flGrad.addColorStop(0.5, `rgba(0,0,0,${darkness * 0.9})`);
-      flGrad.addColorStop(1, `rgba(0,0,0,${darkness})`);
-      ctx.fillStyle = flGrad;
-      ctx.fillRect(0,0,vw,vh);
-
-      let fogHeight = vh * 0.4;
-      let fogOffset = Math.sin(state.time * 2) * 20;
+      flGrad.addColorStop(0, 'rgba(0,0,0,0)'); flGrad.addColorStop(0.5, `rgba(0,0,0,${darkness * 0.9})`); flGrad.addColorStop(1, `rgba(0,0,0,${darkness})`);
+      ctx.fillStyle = flGrad; ctx.fillRect(0,0,vw,vh);
+      let fogHeight = vh * 0.4; let fogOffset = Math.sin(state.time * 2) * 20;
       let fogGrad = ctx.createLinearGradient(0, vh - fogHeight + fogOffset, 0, vh);
-      fogGrad.addColorStop(0, 'rgba(0, 50, 150, 0)');
-      fogGrad.addColorStop(0.5, 'rgba(0, 100, 200, 0.3)');
-      fogGrad.addColorStop(1, 'rgba(0, 150, 255, 0.6)');
-      ctx.fillStyle = fogGrad;
-      ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
+      fogGrad.addColorStop(0, 'rgba(0, 50, 150, 0)'); fogGrad.addColorStop(0.5, 'rgba(0, 100, 200, 0.3)'); fogGrad.addColorStop(1, 'rgba(0, 150, 255, 0.6)');
+      ctx.fillStyle = fogGrad; ctx.fillRect(0, vh - fogHeight + fogOffset, vw, fogHeight);
     }
 
-    const cell = isMobile ? 7 : 12; 
-    const mapW = currentMap[0].length * cell;
-    const mapH = currentMap.length * cell;
-    const ox = vw - mapW - 20;
-    const oy = 20;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.8)';
-    ctx.fillRect(ox, oy, mapW, mapH);
-
-    for (let y = 0; y < currentMap.length; y++) {
-      for (let x = 0; x < currentMap[y].length; x++) {
-        if (currentMap[y][x] === 1) {
-          ctx.fillStyle = '#2a2a30';
-          ctx.fillRect(ox + x*cell, oy + y*cell, cell, cell);
-        }
-      }
-    }
-
+    const cell = isMobile ? 7 : 12; const mapW = currentMap[0].length * cell; const mapH = currentMap.length * cell; const ox = vw - mapW - 20; const oy = 20;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(ox, oy, mapW, mapH);
+    for (let y = 0; y < currentMap.length; y++) { for (let x = 0; x < currentMap[y].length; x++) { if (currentMap[y][x] === 1) { ctx.fillStyle = '#2a2a30'; ctx.fillRect(ox + x*cell, oy + y*cell, cell, cell); } } }
     if (state.level === 1) {
-      for (let a of state.anomalies) {
-        if (a.found) continue;
-        ctx.fillStyle = '#00bfff';
-        ctx.beginPath(); ctx.arc(ox + a.x*cell, oy + a.y*cell, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill();
-      }
-      if (state.rift.active) {
-        ctx.fillStyle = '#00ffff';
-        ctx.beginPath(); ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, isMobile ? 3 : 6, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#ffffff'; ctx.stroke();
-      }
+      for (let a of state.anomalies) { if (a.found) continue; ctx.fillStyle = '#00bfff'; ctx.beginPath(); ctx.arc(ox + a.x*cell, oy + a.y*cell, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill(); }
+      if (state.rift.active) { ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(ox + state.rift.x*cell, oy + state.rift.y*cell, isMobile ? 3 : 6, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
     } else if (state.level === 2) {
-      if (!state.hasCassette2) {
-        ctx.fillStyle = '#4a3b2a';
-        ctx.fillRect(ox + state.locker.x*cell - 4, oy + state.locker.y*cell - 4, 8, 8);
-      }
-      if (state.cassette.active) {
-        ctx.fillStyle = '#ffcc00';
-        ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, isMobile ? 3 : 5, 0, Math.PI*2); ctx.fill();
-      }
-      if (state.gateActive) {
-        ctx.fillStyle = '#00ff00';
-        ctx.beginPath(); ctx.arc(ox + state.gate.x*cell, oy + state.gate.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.stroke();
-      }
+      if (!state.hasCassette2) { ctx.fillStyle = '#4a3b2a'; ctx.fillRect(ox + state.locker.x*cell - 4, oy + state.locker.y*cell - 4, 8, 8); }
+      if (state.cassette.active) { ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(ox + state.cassette.x*cell, oy + state.cassette.y*cell, isMobile ? 3 : 5, 0, Math.PI*2); ctx.fill(); }
+      if (state.gateActive) { ctx.fillStyle = '#00ff00'; ctx.beginPath(); ctx.arc(ox + state.gate.x*cell, oy + state.gate.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke(); }
     }
-    
-    if (state.monster.active) {
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill();
-    }
-
-    let pX = ox + p.x*cell;
-    let pY = oy + p.y*cell;
-    let lineX = ox + (p.x + Math.cos(p.angle)*1.5)*cell;
-    let lineY = oy + (p.y + Math.sin(p.angle)*1.5)*cell;
-
+    if (state.monster.active) { ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(ox + state.monster.x*cell, oy + state.monster.y*cell, isMobile ? 4 : 6, 0, Math.PI*2); ctx.fill(); }
+    let pX = ox + p.x*cell; let pY = oy + p.y*cell; let lineX = ox + (p.x + Math.cos(p.angle)*1.5)*cell; let lineY = oy + (p.y + Math.sin(p.angle)*1.5)*cell;
     if (!isNaN(pX) && !isNaN(pY) && !isNaN(lineX) && !isNaN(lineY)) {
-      ctx.fillStyle = '#dcdcdc';
-      ctx.beginPath(); ctx.arc(pX, pY, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#dcdcdc';
-      ctx.beginPath(); ctx.moveTo(pX, pY); ctx.lineTo(lineX, lineY); ctx.stroke();
+      ctx.fillStyle = '#dcdcdc'; ctx.beginPath(); ctx.arc(pX, pY, isMobile ? 2 : 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#dcdcdc'; ctx.beginPath(); ctx.moveTo(pX, pY); ctx.lineTo(lineX, lineY); ctx.stroke();
     }
-
-    let s = state.sanity / 100;
-    if (s < 0.6) {
-      let v = (0.6 - s) / 0.6;
-      let vg = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*0.2, vw/2, vh/2, Math.max(vw,vh)*0.7);
-      vg.addColorStop(0, 'rgba(0,0,0,0)');
-      vg.addColorStop(1, `rgba(60,0,0,${v*0.85})`);
-      ctx.fillStyle = vg;
-      ctx.fillRect(0,0,vw,vh);
-    }
+    let s = state.sanity / 100; if (s < 0.6) { let v = (0.6 - s) / 0.6; let vg = ctx.createRadialGradient(vw/2, vh/2, Math.min(vw,vh)*0.2, vw/2, vh/2, Math.max(vw,vh)*0.7); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(60,0,0,${v*0.85})`); ctx.fillStyle = vg; ctx.fillRect(0,0,vw,vh); }
   }
 
   let last = performance.now();
   function loop(now) {
-    let dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    try {
-      update(dt);
-      render();
-    } catch (e) {
-      console.error("Ошибка рендера:", e);
-    }
+    let dt = Math.min(0.05, (now - last) / 1000); last = now;
+    try { update(dt); render(); } catch (e) { console.error("Ошибка рендера:", e); }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
-  // --- ПК УПРАВЛЕНИЕ ---
   window.addEventListener('keydown', e => {
     if (e.code === 'ArrowUp' || e.code === 'KeyW') state.keys.up = true;
     if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyX') state.keys.down = true;
@@ -1157,165 +1138,48 @@
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = false;
   });
 
-  cv.addEventListener('click', () => {
-    if (state.running && !isMobile) cv.requestPointerLock();
-  });
+  cv.addEventListener('click', () => { if (state.running && !isMobile) cv.requestPointerLock(); });
+  document.addEventListener('mousemove', (e) => { if (document.pointerLockElement === cv) { let move = e.movementX || 0; state.player.angle += move * 0.002; } });
 
-  document.addEventListener('mousemove', (e) => {
-    if (document.pointerLockElement === cv) {
-      let move = e.movementX || 0;
-      state.player.angle += move * 0.002;
-    }
-  });
-
-  // --- МОБИЛЬНОЕ УПРАВЛЕНИЕ (СЕНСОР) ---
   if (isMobile) {
-    const bindBtn = (id, key) => {
-      const el = document.getElementById(id);
-      el.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[key] = true; }, {passive: false});
-      el.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false});
-      el.addEventListener('touchcancel', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false});
-    };
-
-    bindBtn('btn-up', 'up');
-    bindBtn('btn-down', 'down');
-    bindBtn('btn-left', 'left');
-    bindBtn('btn-right', 'right');
-    bindBtn('btn-run', 'shift');
-
-    document.getElementById('btn-f').addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      toggleFlashlight();
-    }, {passive: false});
-
+    const bindBtn = (id, key) => { const el = document.getElementById(id); el.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[key] = true; }, {passive: false}); el.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false}); el.addEventListener('touchcancel', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false}); };
+    bindBtn('btn-up', 'up'); bindBtn('btn-down', 'down'); bindBtn('btn-left', 'left'); bindBtn('btn-right', 'right'); bindBtn('btn-run', 'shift');
+    document.getElementById('btn-f').addEventListener('touchstart', (e) => { e.preventDefault(); toggleFlashlight(); }, {passive: false});
     const btnE = document.getElementById('btn-e');
-    btnE.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      state.keys.e = true;
-      if (navigator.vibrate) navigator.vibrate(40);
-      setTimeout(() => state.keys.e = false, 200);
-    }, {passive: false});
-
-    // Свайп для камеры
-    let lookTouchId = null;
-    let lastLookX = 0;
-
-    window.addEventListener('touchstart', (e) => {
-      if (e.target.tagName === 'CANVAS' || e.target.id === 'app' || e.target.id === 'mobileControls') {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          const touch = e.changedTouches[i];
-          if (touch.clientX > window.innerWidth / 2) {
-            lookTouchId = touch.identifier;
-            lastLookX = touch.clientX;
-            break;
-          }
-        }
-      }
-    }, {passive: false});
-
-    window.addEventListener('touchmove', (e) => {
-      if (lookTouchId === null) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === lookTouchId) {
-          const dx = touch.clientX - lastLookX;
-          state.player.angle += dx * 0.006;
-          lastLookX = touch.clientX;
-          e.preventDefault();
-        }
-      }
-    }, {passive: false});
-
-    window.addEventListener('touchend', (e) => {
-      if (lookTouchId === null) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === lookTouchId) {
-          lookTouchId = null;
-          break;
-        }
-      }
-    }, {passive: false});
+    btnE.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys.e = true; if (navigator.vibrate) navigator.vibrate(40); setTimeout(() => state.keys.e = false, 200); }, {passive: false});
+    let lookTouchId = null; let lastLookX = 0;
+    window.addEventListener('touchstart', (e) => { if (e.target.tagName === 'CANVAS' || e.target.id === 'app') { for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.clientX > window.innerWidth / 2) { lookTouchId = touch.identifier; lastLookX = touch.clientX; break; } } } }, {passive: false});
+    window.addEventListener('touchmove', (e) => { if (lookTouchId === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId) { const dx = touch.clientX - lastLookX; state.player.angle += dx * 0.006; lastLookX = touch.clientX; e.preventDefault(); } } }, {passive: false});
+    window.addEventListener('touchend', (e) => { if (lookTouchId === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId) { lookTouchId = null; break; } } }, {passive: false});
   }
 
   elContinueBtn.addEventListener('click', () => {
-    playClick();
-    audio1.pause(); audio1.currentTime = 0;
-    audio2.pause(); audio2.currentTime = 0;
-    audio3.pause(); audio3.currentTime = 0;
+    playClick(); if (state.currentAudio) { state.currentAudio.pause(); state.currentAudio.currentTime = 0; }
     elCassettePlayer.style.display = 'none';
-    
-    if (state.currentCassetteType === 1) {
-      state.running = true;
-      if (!isMobile) cv.requestPointerLock();
-      elObjective.textContent = 'НАЙДИ ШКАФ';
-    } else if (state.currentCassetteType === 2) {
-      state.gateActive = true;
-      elObjective.textContent = 'НАЙДИ ШЛЮЗ';
-      say('Код у тебя. Найди зеленый шлюз.', 5);
-      state.running = true;
-      if (!isMobile) cv.requestPointerLock();
-    } else if (state.currentCassetteType === 3) {
-      state.cassette3Played = true;
-      state.monster.active = true;
-      state.monster.x = state.player.x - Math.cos(state.player.angle) * 6;
-      state.monster.y = state.player.y - Math.sin(state.player.angle) * 6;
-      
-      elObjective.textContent = 'ВВЕДИ КОД!';
-      say('Оно уже здесь! Вводи код!', 5);
-      state.running = true;
-      if (!isMobile) cv.requestPointerLock();
-    }
+    if (state.currentCassetteType === 1) { state.running = true; if (!isMobile) cv.requestPointerLock(); elObjective.textContent = 'НАЙДИ ШКАФ'; } 
+    else if (state.currentCassetteType === 2) { state.gateActive = true; elObjective.textContent = 'НАЙДИ ШЛЮЗ'; say('Код у тебя. Найди зеленый шлюз.', 5); state.running = true; if (!isMobile) cv.requestPointerLock(); } 
+    else if (state.currentCassetteType === 3) { state.cassette3Played = true; state.monster.active = true; state.monster.x = state.player.x - Math.cos(state.player.angle) * 6; state.monster.y = state.player.y - Math.sin(state.player.angle) * 6; elObjective.textContent = 'ВВЕДИ КОД!'; say('Оно уже здесь! Вводи код!', 5); state.running = true; if (!isMobile) cv.requestPointerLock(); }
   });
 
-  function startGame() {
-    playClick();
-    initAudio();
-    startAmbientMusic();
-
-    audio1.volume = 0; audio2.volume = 0; audio3.volume = 0;
-    audio1.play().then(() => { audio1.pause(); audio1.currentTime = 0; audio1.volume = 1; }).catch(e => console.log(e));
-    audio2.play().then(() => { audio2.pause(); audio2.currentTime = 0; audio2.volume = 1; }).catch(e => console.log(e));
-    audio3.play().then(() => { audio3.pause(); audio3.currentTime = 0; audio3.volume = 1; }).catch(e => console.log(e));
-
-    buildLevel1();
-    state.time = 0;
-    state.keys = {};
-    elRiftPrompt.style.opacity = 0;
-    elSanity.textContent = '100';
-    elFound.textContent = '0';
-    elSubs.textContent = isMobile ? 'Используй кнопки и свайпы' : 'Кликни по экрану. Собери 5 аномалий (E).';
-    state.msgT = 5;
-    elTitle.style.display = 'none';
-    elEnd.style.display = 'none';
-    elCassettePlayer.style.display = 'none';
-    elKeypadUI.style.display = 'none';
-    state.running = true;
-    if (!isMobile) cv.requestPointerLock();
+  function triggerAct2Ending() {
+    state.running = false; if (!isMobile) document.exitPointerLock();
+    elEndScreen.style.display = 'flex'; elEndText.innerHTML = 'Ты вошел в безопасную зону.<br>Доктор Пробикин ждет тебя.<br><br><span style="color:#a00;letter-spacing:4px;">КОНЕЦ.</span>';
+  }
+  function triggerAct2Fail() {
+    elEndScreen.style.display = 'flex'; elEndText.innerHTML = 'Тьма поглотила тебя.<br>Реальность растворилась.<br><br><span style="color:#a00;letter-spacing:4px;">ПОТЕРЯ РАССУДКА.</span>';
   }
 
-  function finish(win) {
-    state.running = false;
-    if (!isMobile) document.exitPointerLock();
-    elEnd.style.display = 'flex';
-    if (win) {
-      elEndTitle.textContent = 'ЛАБОРАТОРИЯ';
-      elEndTitle.style.color = '#00ff00';
-      elEndText.textContent = 'Доктор Пробикин: "Отличная работа. Добро пожаловать в безопасную зону."';
-    } else {
-      elEndTitle.textContent = 'ПОТЕРЯ РАССУДКА';
-      elEndTitle.style.color = '#ff0000';
-      elEndText.textContent = 'Тьма поглотила тебя. Реальность растворилась.';
-    }
-  }
-
-  document.getElementById('startBtn').addEventListener('click', startGame);
-  document.getElementById('againBtn').addEventListener('click', () => {
-    playClick();
-    elEnd.style.display = 'none';
-    elTitle.style.display = 'flex';
-  });
-})();
+  // Запуск
+  initAudio(); startAmbientMusic();
+  buildLevel1();
+  state.time = 0; state.keys = {};
+  elRiftPrompt.style.opacity = 0; elSanity.textContent = '100'; elFound.textContent = '0';
+  elSubs.textContent = isMobile ? 'Используй кнопки и свайпы' : 'Кликни по экрану. Собери 5 аномалий (E).';
+  state.msgT = 5;
+  state.running = true;
+  if (!isMobile) cv.requestPointerLock();
+}
 </script>
+
 </body>
 </html>
