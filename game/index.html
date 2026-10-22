@@ -5,18 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Аномалия 5</title>
 <style>
-  /* ОБЩИЕ СТИЛИ */
   * { box-sizing: border-box; }
   body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; color: #ddd; user-select: none; -webkit-user-select: none; touch-action: none; }
-  canvas { display: block; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   
-  /* VHS ЭФФЕКТЫ */
   #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 3; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 90%, rgba(0,0,0,0.95) 100%); }
   #grain { position: absolute; inset: 0; pointer-events: none; z-index: 4; opacity: 0.06; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   #flash { position: absolute; inset: 0; pointer-events: none; background: #f00; opacity: 0; z-index: 6; transition: opacity 0.12s; mix-blend-mode: screen; }
   #fade { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; z-index: 50; transition: opacity 2s; }
 
-  /* HUD АКТ 1 */
   #hud { position: absolute; top: 12px; left: 12px; right: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 6px; text-shadow: 0 1px 4px #000, 0 0 8px #000; font-size: 14px; z-index: 10; }
   #subtitle { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 82%; max-width: 760px; text-align: center; background: linear-gradient(180deg, rgba(0,0,0,0.82), rgba(10,0,0,0.9)); padding: 14px 22px; border-radius: 3px; border-left: 3px solid #b00; border-right: 3px solid #b00; font-size: 15px; line-height: 1.5; pointer-events: none; transition: opacity 0.5s; z-index: 10; box-shadow: 0 0 30px rgba(120,0,0,0.3); }
   #crosshair-act1 { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(220,220,220,0.5); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 5; transition: all 0.15s; }
@@ -29,12 +26,10 @@
   #health-fill { height: 100%; background: linear-gradient(90deg, #600, #c00, #f33); width: 100%; transition: width 0.4s; }
   #controls-info { position: absolute; bottom: 10px; right: 12px; color: #555; font-size: 12px; text-align: right; pointer-events: none; z-index: 5; }
   
-  /* МИНИКАРТА АКТ 1 */
   #minimap-container { position: absolute; top: 12px; right: 12px; width: 180px; height: 180px; border: 2px solid #444; border-radius: 6px; background: rgba(0,0,0,0.7); overflow: hidden; z-index: 8; box-shadow: 0 0 20px rgba(0,0,0,0.8); display: none; }
   #minimap { width: 100%; height: 100%; display: block; }
   #minimap-label { position: absolute; bottom: 2px; right: 4px; font-size: 9px; color: #666; letter-spacing: 2px; text-shadow: 0 0 4px #000; pointer-events: none; }
 
-  /* СТАРТОВЫЙ ЭКРАН */
   #start-screen { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #1a0505 0%, #000 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
   #start-screen h1 { font-size: 72px; letter-spacing: 10px; margin: 0 0 8px 0; color: #b00; text-shadow: 0 0 20px #500, 0 0 60px #300, 0 0 100px #200; animation: pulse 3s infinite ease-in-out; }
   @keyframes pulse { 0%,100%{opacity:0.9;} 50%{opacity:1;} }
@@ -43,7 +38,6 @@
   #start-screen button { background: rgba(20,0,0,0.7); color: #dcc; border: 1px solid #a00; padding: 15px 46px; font-size: 18px; font-family: 'Courier New', monospace; cursor: pointer; letter-spacing: 5px; transition: all 0.3s; }
   #start-screen button:hover { background: #a00; color: #fff; box-shadow: 0 0 40px #a00; }
 
-  /* UI АКТА 2 */
   #act2-ui { display: none; position: absolute; inset: 0; z-index: 10; pointer-events: none; }
   #act2-hud { position: absolute; left: 16px; bottom: 16px; font-size: 14px; line-height: 1.6; text-shadow: 0 0 8px #000; color: #ddd; }
   #act2-found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
@@ -73,7 +67,6 @@
   #end-screen h1 { color: #a00; font-size: 52px; letter-spacing: 8px; text-shadow: 0 0 40px #500; margin-bottom: 24px; }
   #end-screen p { color: #777; max-width: 640px; line-height: 1.8; font-size: 16px; }
 
-  /* МОБИЛЬНОЕ УПРАВЛЕНИЕ */
   #mobileControls { display: none; position: absolute; inset: 0; z-index: 25; pointer-events: none; }
   body.mobile #mobileControls { display: block !important; }
   
@@ -199,31 +192,86 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ============================================================
-//  ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И МОБИЛЬНОЕ УПРАВЛЕНИЕ
+//  ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ЗВУКОВАЯ СИСТЕМА
 // ============================================================
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 if (isMobile) document.body.classList.add('mobile');
 
 let act1Active = true;
-let globalKeys = {}; // Для Акта 1
-let act2State = null; // Ссылка на состояние Акта 2
-let audioCtxGlobal = null;
+let globalKeys = {}; 
+let act2State = null; 
 
-// Разблокировка звука при первом тапе
-document.body.addEventListener('touchstart', () => {
-  if (!audioCtxGlobal) {
-    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
-  }
-}, { once: true });
-document.body.addEventListener('click', () => {
-  if (!audioCtxGlobal) {
-    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
-  }
-}, { once: true });
+// АУДИО СИСТЕМА
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
 
-// Привязка мобильных кнопок
+document.body.addEventListener('touchstart', initAudio, { once: true });
+document.body.addEventListener('click', initAudio, { once: true });
+
+function playTone(freq, type, duration, vol) {
+  if (!audioCtx) return;
+  let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+  osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+
+function playFootstep(isSprint) {
+  if (!audioCtx) return;
+  let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+  osc.type = 'triangle'; let freq = 60 + Math.random() * 20;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(isSprint ? 0.4 : 0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playClick() { initAudio(); playTone(600, 'square', 0.1, 0.05); }
+
+let lastMonsterSound = 0;
+function playMonsterGrowl() {
+  initAudio(); if (Date.now() - lastMonsterSound < 1500) return; lastMonsterSound = Date.now();
+  let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.5);
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function playTransition() {
+  initAudio(); let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.5);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+}
+
+let lastSanitySound = 0;
+function playSanityWarning() {
+  initAudio(); if (Date.now() - lastSanitySound < 2000) return; lastSanitySound = Date.now(); playTone(150, 'sine', 0.5, 0.15);
+}
+
+let ambientStarted = false;
+function startAmbientMusic() {
+  if (!audioCtx || ambientStarted) return; ambientStarted = true;
+  let masterGain = audioCtx.createGain(); masterGain.gain.value = 0.08; masterGain.connect(audioCtx.destination);
+  let drone1 = audioCtx.createOscillator(); drone1.type = 'sine'; drone1.frequency.value = 50; 
+  let drone2 = audioCtx.createOscillator(); drone2.type = 'triangle'; drone2.frequency.value = 51; 
+  let droneGain = audioCtx.createGain(); droneGain.gain.value = 0.5;
+  drone1.connect(droneGain); drone2.connect(droneGain); droneGain.connect(masterGain);
+  let lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.1; 
+  let lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.3; 
+  lfo.connect(lfoGain); lfoGain.connect(droneGain.gain); 
+  let bufferSize = audioCtx.sampleRate * 5; let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); let data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  let noise = audioCtx.createBufferSource(); noise.buffer = buffer; noise.loop = true;
+  let filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 200; 
+  let noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.15;
+  noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+  drone1.start(); drone2.start(); lfo.start(); noise.start();
+}
+
+// МОБИЛЬНОЕ УПРАВЛЕНИЕ
 const bindMobileBtn = (id, key, act2Key) => {
   const el = document.getElementById(id);
   if(!el) return;
@@ -240,7 +288,6 @@ const bindMobileBtn = (id, key, act2Key) => {
   el.addEventListener('touchstart', startAction, {passive: false});
   el.addEventListener('touchend', endAction, {passive: false});
   el.addEventListener('touchcancel', endAction, {passive: false});
-  // Для теста на ПК
   el.addEventListener('mousedown', startAction);
   el.addEventListener('mouseup', endAction);
   el.addEventListener('mouseleave', endAction);
@@ -252,28 +299,25 @@ bindMobileBtn('btn-left', 'KeyA', 'left');
 bindMobileBtn('btn-right', 'KeyD', 'right');
 bindMobileBtn('btn-run', 'ShiftLeft', 'shift');
 
-// Кнопки действий
 const btnE = document.getElementById('btn-e');
-btnE.addEventListener('touchstart', (e) => {
-  if(e.cancelable) e.preventDefault();
+const eAction = (e) => {
+  if(e && e.cancelable) e.preventDefault();
+  initAudio();
   if (act1Active && window.tryInteractAct1) window.tryInteractAct1();
   else if (act2State) { act2State.keys.e = true; setTimeout(() => act2State.keys.e = false, 200); }
-}, {passive: false});
-btnE.addEventListener('mousedown', (e) => {
-  if (act1Active && window.tryInteractAct1) window.tryInteractAct1();
-  else if (act2State) { act2State.keys.e = true; setTimeout(() => act2State.keys.e = false, 200); }
-});
+};
+btnE.addEventListener('touchstart', eAction, {passive: false});
+btnE.addEventListener('mousedown', eAction);
 
 const btnF = document.getElementById('btn-f');
-btnF.addEventListener('touchstart', (e) => {
-  if(e.cancelable) e.preventDefault();
+const fAction = (e) => {
+  if(e && e.cancelable) e.preventDefault();
   if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
-}, {passive: false});
-btnF.addEventListener('mousedown', (e) => {
-  if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
-});
+};
+btnF.addEventListener('touchstart', fAction, {passive: false});
+btnF.addEventListener('mousedown', fAction);
 
-// Глобальные свайпы (Обзор камеры)
+// СВАЙПЫ (ОБЗОР)
 let lookTouchId = null;
 let lastLookX = 0;
 let lastLookY = 0;
@@ -282,7 +326,6 @@ window.addEventListener('touchstart', (e) => {
   if (lookTouchId !== null) return;
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
-    // Игнорируем нажатия на UI-кнопки
     if (touch.target.closest('.dpad') || touch.target.closest('.action-btns') || touch.target.closest('button') || touch.target.closest('#start-screen') || touch.target.closest('#cassettePlayer') || touch.target.closest('#keypadUI')) continue;
     
     if (touch.clientX > window.innerWidth / 2) {
@@ -302,11 +345,8 @@ window.addEventListener('touchmove', (e) => {
       const dx = touch.clientX - lastLookX;
       const dy = touch.clientY - lastLookY;
       
-      if (act1Active && window.lookAct1) {
-        window.lookAct1(dx, dy);
-      } else if (act2State && window.lookAct2) {
-        window.lookAct2(dx);
-      }
+      if (act1Active && window.lookAct1) window.lookAct1(dx, dy);
+      else if (act2State && window.lookAct2) window.lookAct2(dx);
       
       lastLookX = touch.clientX;
       lastLookY = touch.clientY;
@@ -317,16 +357,15 @@ window.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', (e) => {
   for (let i = 0; i < e.changedTouches.length; i++) {
-    if (e.changedTouches[i].identifier === lookTouchId) {
-      lookTouchId = null;
-    }
+    if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
   }
 }, {passive: false});
 
-// Кнопка Старта
+// КНОПКА СТАРТА
 const startBtn = document.getElementById('start-btn');
 const startHandler = (e) => {
   if (e && e.cancelable) e.preventDefault();
+  initAudio();
   if (window.startGameAct1) window.startGameAct1();
 };
 startBtn.addEventListener('click', startHandler);
@@ -511,7 +550,7 @@ startBtn.addEventListener('touchstart', startHandler, {passive: false});
   const hemi = new THREE.HemisphereLight(0x8a8a9a, 0x2a2018, 0.6); scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xaab0c0, 0.5); dir.position.set(40, 70, 25); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048); dir.shadow.camera.near = 1; dir.shadow.camera.far = 250; dir.shadow.camera.left = -80; dir.shadow.camera.right = 80; dir.shadow.camera.top = 80; dir.shadow.camera.bottom = -80; dir.shadow.bias = -0.0005; scene.add(dir);
 
-  const player = { height: 1.65, speed: 3.0, runSpeed: 5.2, yaw: 0, pitch: 0, canMove: true, position: new THREE.Vector3(0, 1.65, 0), bob: 0, radius: 0.35 };
+  const player = { height: 1.65, speed: 3.0, runSpeed: 5.2, yaw: 0, pitch: 0, canMove: true, position: new THREE.Vector3(0, 1.65, 0), bob: 0, radius: 0.35, stepTimer: 0 };
   let mouseLocked = false;
   const raycaster = new THREE.Raycaster();
   let interactables = [];
@@ -762,7 +801,20 @@ startBtn.addEventListener('touchstart', startHandler, {passive: false});
     const move = new THREE.Vector3();
     if (globalKeys['KeyW'] || globalKeys['ArrowUp']) move.add(forward); if (globalKeys['KeyS'] || globalKeys['ArrowDown']) move.sub(forward); if (globalKeys['KeyA'] || globalKeys['ArrowLeft']) move.sub(right); if (globalKeys['KeyD'] || globalKeys['ArrowRight']) move.add(right);
     const moving = move.length() > 0;
-    if (moving) { move.normalize().multiplyScalar(speed * dt); player.position.x += move.x; resolveCollisions(player.position, player.radius); player.position.z += move.z; resolveCollisions(player.position, player.radius); player.bob += dt * (running ? 14 : 9); } else { player.bob += dt * 2; }
+    
+    if (moving) { 
+      if (player.stepTimer > 0) player.stepTimer -= dt;
+      else { playFootstep(running); player.stepTimer = running ? 0.3 : 0.5; }
+      
+      move.normalize().multiplyScalar(speed * dt); 
+      player.position.x += move.x; resolveCollisions(player.position, player.radius); 
+      player.position.z += move.z; resolveCollisions(player.position, player.radius); 
+      player.bob += dt * (running ? 14 : 9); 
+    } else { 
+      player.bob += dt * 2; 
+      player.stepTimer = 0;
+    }
+    
     if (gameState === STATE.APARTMENT) { player.position.x = Math.max(-5.4, Math.min(5.4, player.position.x)); player.position.z = Math.max(-4.4, Math.min(4.4, player.position.z)); }
     const bobY = moving ? Math.sin(player.bob) * 0.025 : 0; const bobX = moving ? Math.cos(player.bob*0.5) * 0.012 : 0;
     camera.position.set(player.position.x + bobX, player.position.y + bobY, player.position.z); camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
@@ -795,10 +847,8 @@ startBtn.addEventListener('touchstart', startHandler, {passive: false});
     showSubtitle("Ты в своей квартире. За окном — серое небо 90-х. Ты замечаешь трещину в стене. Слышен странный гул...");
     clock.getDelta(); drawMinimap(); window.act1Loop();
     
-    if (!audioCtxGlobal) {
-      audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
-    }
+    initAudio();
+    startAmbientMusic();
   };
 
   window.act1Loop = function() {
@@ -866,72 +916,6 @@ function initAct2Game() {
   const elKeypadScreen = document.getElementById('keypadScreen');
   const elEndScreen = document.getElementById('end-screen');
   const elEndText = document.getElementById('end-text');
-
-  let audioCtx = null;
-  function initAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-  }
-
-  function playTone(freq, type, duration, vol) {
-    if (!audioCtx) return;
-    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration);
-  }
-
-  function playFootstep(isSprint) {
-    if (!audioCtx) return;
-    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = 'triangle'; let freq = 60 + Math.random() * 20;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(isSprint ? 0.4 : 0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-  }
-
-  let lastMonsterSound = 0;
-  function playMonsterGrowl() {
-    initAudio(); if (state.time - lastMonsterSound < 1.5) return; lastMonsterSound = state.time;
-    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.5);
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
-  }
-
-  function playClick() { initAudio(); playTone(600, 'square', 0.1, 0.05); }
-
-  function playTransition() {
-    initAudio(); let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.5);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 1.5);
-  }
-
-  let lastSanitySound = 0;
-  function playSanityWarning() {
-    initAudio(); if (state.time - lastSanitySound < 2) return; lastSanitySound = state.time; playTone(150, 'sine', 0.5, 0.15);
-  }
-
-  let ambientStarted = false;
-  function startAmbientMusic() {
-    if (!audioCtx || ambientStarted) return; ambientStarted = true;
-    let masterGain = audioCtx.createGain(); masterGain.gain.value = 0.08; masterGain.connect(audioCtx.destination);
-    let drone1 = audioCtx.createOscillator(); drone1.type = 'sine'; drone1.frequency.value = 50; 
-    let drone2 = audioCtx.createOscillator(); drone2.type = 'triangle'; drone2.frequency.value = 51; 
-    let droneGain = audioCtx.createGain(); droneGain.gain.value = 0.5;
-    drone1.connect(droneGain); drone2.connect(droneGain); droneGain.connect(masterGain);
-    let lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.1; 
-    let lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.3; 
-    lfo.connect(lfoGain); lfoGain.connect(droneGain.gain); 
-    let bufferSize = audioCtx.sampleRate * 5; let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); let data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    let noise = audioCtx.createBufferSource(); noise.buffer = buffer; noise.loop = true;
-    let filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 200; 
-    let noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.15;
-    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
-    drone1.start(); drone2.start(); lfo.start(); noise.start();
-  }
 
   const TEX_SIZE = 64;
   function createRaycastTexture(type) {
