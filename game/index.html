@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Аномалия 5</title>
 <style>
-  /* ОБЩИЕ СТИЛИ (ИЗ АКТА 1) */
+  /* ОБЩИЕ СТИЛИ */
   * { box-sizing: border-box; }
-  body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; color: #ddd; user-select: none; }
+  body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; color: #ddd; user-select: none; -webkit-user-select: none; touch-action: none; }
   canvas { display: block; width: 100%; height: 100%; }
   
   /* VHS ЭФФЕКТЫ */
@@ -18,21 +18,19 @@
 
   /* HUD АКТ 1 */
   #hud { position: absolute; top: 12px; left: 12px; right: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 6px; text-shadow: 0 1px 4px #000, 0 0 8px #000; font-size: 14px; z-index: 10; }
-  #subtitle { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); width: 82%; max-width: 760px; text-align: center; background: linear-gradient(180deg, rgba(0,0,0,0.82), rgba(10,0,0,0.9)); padding: 14px 22px; border-radius: 3px; border-left: 3px solid #b00; border-right: 3px solid #b00; font-size: 15px; line-height: 1.5; pointer-events: none; transition: opacity 0.5s; z-index: 10; box-shadow: 0 0 30px rgba(120,0,0,0.3); }
+  #subtitle { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 82%; max-width: 760px; text-align: center; background: linear-gradient(180deg, rgba(0,0,0,0.82), rgba(10,0,0,0.9)); padding: 14px 22px; border-radius: 3px; border-left: 3px solid #b00; border-right: 3px solid #b00; font-size: 15px; line-height: 1.5; pointer-events: none; transition: opacity 0.5s; z-index: 10; box-shadow: 0 0 30px rgba(120,0,0,0.3); }
   #crosshair-act1 { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(220,220,220,0.5); border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; z-index: 5; transition: all 0.15s; }
   #crosshair-act1.active { border-color: #f33; box-shadow: 0 0 10px #f33; transform: translate(-50%,-50%) scale(1.4); }
-  
   .inventory { position: absolute; bottom: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
   .inv-slot { width: 44px; height: 44px; border: 1px solid #333; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 22px; transition: all 0.2s; filter: grayscale(1) opacity(0.3); }
   .inv-slot.active { filter: none; border-color: #a00; box-shadow: 0 0 12px rgba(160,0,0,0.7); }
-  
   #objective { color: #ffb020; font-weight: bold; }
   #health-bar { width: 220px; height: 9px; background: rgba(40,0,0,0.8); border: 1px solid #600; overflow: hidden; }
   #health-fill { height: 100%; background: linear-gradient(90deg, #600, #c00, #f33); width: 100%; transition: width 0.4s; }
   #controls-info { position: absolute; bottom: 10px; right: 12px; color: #555; font-size: 12px; text-align: right; pointer-events: none; z-index: 5; }
-
-  /* МИНИКАРТА */
-  #minimap-container { position: absolute; top: 12px; right: 12px; width: 180px; height: 180px; border: 2px solid #444; border-radius: 6px; background: rgba(0,0,0,0.7); overflow: hidden; z-index: 8; box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.6); display: none; }
+  
+  /* МИНИКАРТА АКТ 1 */
+  #minimap-container { position: absolute; top: 12px; right: 12px; width: 180px; height: 180px; border: 2px solid #444; border-radius: 6px; background: rgba(0,0,0,0.7); overflow: hidden; z-index: 8; box-shadow: 0 0 20px rgba(0,0,0,0.8); display: none; }
   #minimap { width: 100%; height: 100%; display: block; }
   #minimap-label { position: absolute; bottom: 2px; right: 4px; font-size: 9px; color: #666; letter-spacing: 2px; text-shadow: 0 0 4px #000; pointer-events: none; }
 
@@ -45,15 +43,14 @@
   #start-screen button { background: rgba(20,0,0,0.7); color: #dcc; border: 1px solid #a00; padding: 15px 46px; font-size: 18px; font-family: 'Courier New', monospace; cursor: pointer; letter-spacing: 5px; transition: all 0.3s; }
   #start-screen button:hover { background: #a00; color: #fff; box-shadow: 0 0 40px #a00; }
 
-  /* --- СТИЛИ АКТА 2 (АДАПТИРОВАННЫЕ) --- */
+  /* UI АКТА 2 */
   #act2-ui { display: none; position: absolute; inset: 0; z-index: 10; pointer-events: none; }
   #act2-hud { position: absolute; left: 16px; bottom: 16px; font-size: 14px; line-height: 1.6; text-shadow: 0 0 8px #000; color: #ddd; }
   #act2-found { color: #00bfff; text-shadow: 0 0 10px #00bfff; font-weight: bold; }
   #act2-inventory { margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; display: none;}
   .act2-inv-item { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; font-weight: bold; margin-bottom: 4px;}
-  
   #act2-objective { position: absolute; top: 16px; left: 16px; font-size: 16px; color: #ffb020; text-shadow:0 0 10px #000; font-weight: bold;}
-  #act2-subs { position: absolute; bottom: 80px; left: 0; right: 0; text-align: center; font-size: 17px; color: #e2e2e2; text-shadow:0 0 10px #000; padding:0 40px; line-height:1.5; }
+  #act2-subs { position: absolute; bottom: 100px; left: 0; right: 0; text-align: center; font-size: 17px; color: #e2e2e2; text-shadow:0 0 10px #000; padding:0 40px; line-height:1.5; }
   #act2-riftPrompt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #b00; text-shadow: 0 0 20px #b00; letter-spacing: 4px; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
   #crosshair-act2 { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(220,220,220,0.5); border-radius: 50%; transform: translate(-50%,-50%); z-index: 5; }
 
@@ -76,7 +73,7 @@
   #end-screen h1 { color: #a00; font-size: 52px; letter-spacing: 8px; text-shadow: 0 0 40px #500; margin-bottom: 24px; }
   #end-screen p { color: #777; max-width: 640px; line-height: 1.8; font-size: 16px; }
 
-  /* МОБИЛЬНОЕ УПРАВЛЕНИЕ (ДЛЯ АКТА 2) */
+  /* МОБИЛЬНОЕ УПРАВЛЕНИЕ */
   #mobileControls { display: none; position: absolute; inset: 0; z-index: 25; pointer-events: none; }
   body.mobile #mobileControls { display: block; }
   .dpad { position: absolute; bottom: 30px; left: 20px; width: 150px; height: 150px; pointer-events: auto; }
@@ -86,10 +83,17 @@
   .action-btns { position: absolute; bottom: 30px; right: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; pointer-events: auto; }
   .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; }
   .action-btn:active { background: rgba(255,255,255,0.4); }
-  #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px; background: rgba(0, 191, 255, 0.2); border-color: #00bfff; color: #00bfff; font-size: 20px; }
+  #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px; background: rgba(255, 0, 0, 0.2); border-color: #f33; color: #f33; font-size: 20px; }
+  
+  body.mobile #controls-info { display: none; }
+  body.mobile #act2-subs { bottom: 200px; }
 </style>
 </head>
 <body>
+
+<audio id="cassetteAudio" src="instructions.wav" preload="auto"></audio>
+<audio id="cassetteAudio2" src="instructions_2.wav" preload="auto"></audio>
+<audio id="cassetteAudio3" src="instructions_3.wav" preload="auto"></audio>
 
 <!-- ================= АКТ 1 (THREE.JS) ================= -->
 <canvas id="c-act1" style="position:absolute; inset:0;"></canvas>
@@ -113,7 +117,7 @@
     <div class="inv-slot" id="slot1" title="Тряпка">🧻</div>
     <div class="inv-slot" id="slot2" title="Перчатки">🧤</div>
   </div>
-  <div id="controls-info">WASD — движение &nbsp;|&nbsp; Мышь — обзор &nbsp;|&nbsp; E — взаимодействие &nbsp;|&nbsp; Shift — бег</div>
+  <div id="controls-info">WASD — движение &nbsp;|&nbsp; Мышь — обзор &nbsp;|&nbsp; E — взаимодействие</div>
   <div id="minimap-container">
     <canvas id="minimap" width="180" height="180"></canvas>
     <div id="minimap-label">MAP</div>
@@ -125,9 +129,7 @@
   <h1>АНОМАЛИЯ 5</h1>
   <p>После взрыва на заводе в городе начались аномалии.<br>Трещина в стене твоей квартиры — не то, чем кажется.<br><br><span style="color:#a00;">Один год. Один город. Одна аномалия.</span></p>
   <button id="start-btn">НАЧАТЬ ИГРУ</button>
-  <p style="margin-top:22px;font-size:11px;color:#444;">Содержит сцены жестокости и психологического напряжения. 18+</p>
 </div>
-
 
 <!-- ================= АКТ 2 (CANVAS RAYCASTER) ================= -->
 <canvas id="c-act2" style="position:absolute; inset:0; display:none;"></canvas>
@@ -192,15 +194,79 @@
   </div>
 </div>
 
-<!-- БИБЛИОТЕКА THREE.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================
+//  ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И МОБИЛЬНОЕ УПРАВЛЕНИЕ
+// ============================================================
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (isMobile) document.body.classList.add('mobile');
 
-<!-- ================= КОД АКТА 1 ================= -->
-<script>
-const canvas1 = document.getElementById('c-act1');
 let act1Active = true;
-</script>
-<script>
+let globalKeys = {}; // Для Акта 1
+let act2State = null; // Ссылка на состояние Акта 2
+
+// Привязка мобильных кнопок (работает для обоих актов)
+const bindMobileBtn = (id, key) => {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('touchstart', (e) => { 
+    e.preventDefault(); 
+    if (act1Active) globalKeys[key] = true; 
+    else if (act2State) act2State.keys[key] = true;
+  }, {passive: false});
+  el.addEventListener('touchend', (e) => { 
+    e.preventDefault(); 
+    if (act1Active) globalKeys[key] = false; 
+    else if (act2State) act2State.keys[key] = false;
+  }, {passive: false});
+  el.addEventListener('touchcancel', (e) => { 
+    e.preventDefault(); 
+    if (act1Active) globalKeys[key] = false; 
+    else if (act2State) act2State.keys[key] = false;
+  }, {passive: false});
+};
+
+bindMobileBtn('btn-up', 'KeyW');
+bindMobileBtn('btn-down', 'KeyS');
+bindMobileBtn('btn-left', 'KeyA');
+bindMobileBtn('btn-right', 'KeyD');
+bindMobileBtn('btn-run', 'ShiftLeft');
+
+document.getElementById('btn-e').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (act1Active) {
+    if (window.tryInteractAct1) window.tryInteractAct1();
+  } else if (act2State) {
+    act2State.keys.e = true;
+    setTimeout(() => act2State.keys.e = false, 200);
+  }
+}, {passive: false});
+
+document.getElementById('btn-f').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
+}, {passive: false});
+
+// Разблокировка звука при первом тапе
+let audioCtxGlobal = null;
+document.body.addEventListener('touchstart', () => {
+  if (!audioCtxGlobal) {
+    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
+  }
+}, { once: true });
+document.body.addEventListener('click', () => {
+  if (!audioCtxGlobal) {
+    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
+  }
+}, { once: true });
+
+
+// ============================================================
+//  КОД АКТА 1 (THREE.JS)
+// ============================================================
 (function(){
   const canvas = document.getElementById('c-act1');
   const STATE = { MENU:0, APARTMENT:1, ESCAPE:2, FOREST:3, ENDING:4 };
@@ -377,7 +443,6 @@ let act1Active = true;
   const dir = new THREE.DirectionalLight(0xaab0c0, 0.5); dir.position.set(40, 70, 25); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048); dir.shadow.camera.near = 1; dir.shadow.camera.far = 250; dir.shadow.camera.left = -80; dir.shadow.camera.right = 80; dir.shadow.camera.top = 80; dir.shadow.camera.bottom = -80; dir.shadow.bias = -0.0005; scene.add(dir);
 
   const player = { height: 1.65, speed: 3.0, runSpeed: 5.2, yaw: 0, pitch: 0, canMove: true, position: new THREE.Vector3(0, 1.65, 0), bob: 0, radius: 0.35 };
-  let keys = {};
   let mouseLocked = false;
   const raycaster = new THREE.Raycaster();
   let interactables = [];
@@ -526,13 +591,43 @@ let act1Active = true;
     player.position.set(0, player.height, 2); player.yaw = Math.PI; player.pitch = 0.05; player.bob = 0;
   }
 
-  document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'KeyE') tryInteract(); });
-  document.addEventListener('keyup', e => keys[e.code] = false);
+  window.addEventListener('keydown', e => { globalKeys[e.code] = true; if (e.code === 'KeyE' && act1Active) window.tryInteractAct1(); });
+  window.addEventListener('keyup', e => globalKeys[e.code] = false);
   canvas.addEventListener('click', () => { if (gameState !== STATE.MENU && gameState !== STATE.ENDING && gameState !== STATE.ACT2) canvas.requestPointerLock(); });
   document.addEventListener('pointerlockchange', () => { mouseLocked = document.pointerLockElement === canvas; });
   document.addEventListener('mousemove', e => { if (!mouseLocked) return; player.yaw -= e.movementX * 0.0022; player.pitch -= e.movementY * 0.0022; player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch)); });
 
-  function tryInteract() {
+  // Мобильное управление для Акта 1
+  let lookTouchId1 = null, lastLookX1 = 0, lastLookY1 = 0;
+  canvas.addEventListener('touchstart', (e) => {
+    if (!act1Active) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.clientX > window.innerWidth / 2) {
+        lookTouchId1 = touch.identifier; lastLookX1 = touch.clientX; lastLookY1 = touch.clientY; break;
+      }
+    }
+  }, {passive: false});
+  canvas.addEventListener('touchmove', (e) => {
+    if (!act1Active || lookTouchId1 === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === lookTouchId1) {
+        const dx = touch.clientX - lastLookX1;
+        const dy = touch.clientY - lastLookY1;
+        player.yaw -= dx * 0.005;
+        player.pitch -= dy * 0.005;
+        player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch));
+        lastLookX1 = touch.clientX; lastLookY1 = touch.clientY;
+        e.preventDefault();
+      }
+    }
+  }, {passive: false});
+  canvas.addEventListener('touchend', (e) => {
+    for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === lookTouchId1) lookTouchId1 = null; }
+  }, {passive: false});
+
+  window.tryInteractAct1 = function() {
     if (!currentInteractable) return;
     const t = currentInteractable.userData.type;
     switch(t) {
@@ -551,7 +646,7 @@ let act1Active = true;
       case 'escape': if (gameState === STATE.FOREST) triggerEnding(); break;
       case 'escapeTrench': flags.wentIntoTrench = true; gameState = STATE.ESCAPE; document.getElementById('flash').style.opacity = '0.8'; setTimeout(() => { document.getElementById('flash').style.opacity = '0'; buildCity(); showSubtitle("Ты просыпаешься в грязи, смешанной с кровью. Вдалеке виднеется остановка. Нужно идти."); currentObjective = "Дойти до остановки автобуса"; updateHUD(); }, 1000); break;
     }
-  }
+  };
 
   function triggerHallucinationSequence() {
     flags.foundBlood = true; const flash = document.getElementById('flash'); flash.style.opacity = '0.7'; setTimeout(() => flash.style.opacity = '0', 300);
@@ -569,7 +664,6 @@ let act1Active = true;
     setTimeout(() => { showSubtitle("Если увидят красную руку — либо убьют, либо запрут на карантин. Остаётся только трещина..."); currentObjective = "Бежать к трещине в стене"; updateHUD(); const crackEscape = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 0.4), new THREE.MeshBasicMaterial({ visible:false })); crackEscape.position.set(0, 1.2, -4.5); crackEscape.userData = { type: 'escapeTrench', label: 'Залезть в трещину' }; worldGroup.add(crackEscape); interactables.push(crackEscape); interactables = interactables.filter(o => o.userData.type !== 'crack'); }, 4500);
   }
 
-  // ===== ПЕРЕХОД В АКТ 2 =====
   function triggerEnding() {
     gameState = STATE.ENDING; document.exitPointerLock();
     document.getElementById('fade').style.opacity = '1';
@@ -577,8 +671,7 @@ let act1Active = true;
       document.getElementById('act1-ui').style.display = 'none';
       document.getElementById('c-act1').style.display = 'none';
       document.getElementById('fade').style.opacity = '0';
-      
-      // Запускаем второй акт
+      act1Active = false; // ОТКЛЮЧАЕМ АКТ 1
       startAct2();
     }, 2000);
   }
@@ -618,11 +711,11 @@ let act1Active = true;
 
   const clock = new THREE.Clock();
   function updatePlayer(dt) {
-    if (!player.canMove || gameState === STATE.MENU || gameState === STATE.ENDING) return;
-    const running = keys['ShiftLeft'] || keys['ShiftRight']; const speed = running ? player.runSpeed : player.speed;
+    if (!act1Active || !player.canMove || gameState === STATE.MENU || gameState === STATE.ENDING) return;
+    const running = globalKeys['ShiftLeft'] || globalKeys['ShiftRight']; const speed = running ? player.runSpeed : player.speed;
     const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); const right = new THREE.Vector3( Math.cos(player.yaw), 0, -Math.sin(player.yaw));
     const move = new THREE.Vector3();
-    if (keys['KeyW'] || keys['ArrowUp']) move.add(forward); if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward); if (keys['KeyA'] || keys['ArrowLeft']) move.sub(right); if (keys['KeyD'] || keys['ArrowRight']) move.add(right);
+    if (globalKeys['KeyW'] || globalKeys['ArrowUp']) move.add(forward); if (globalKeys['KeyS'] || globalKeys['ArrowDown']) move.sub(forward); if (globalKeys['KeyA'] || globalKeys['ArrowLeft']) move.sub(right); if (globalKeys['KeyD'] || globalKeys['ArrowRight']) move.add(right);
     const moving = move.length() > 0;
     if (moving) { move.normalize().multiplyScalar(speed * dt); player.position.x += move.x; resolveCollisions(player.position, player.radius); player.position.z += move.z; resolveCollisions(player.position, player.radius); player.bob += dt * (running ? 14 : 9); } else { player.bob += dt * 2; }
     if (gameState === STATE.APARTMENT) { player.position.x = Math.max(-5.4, Math.min(5.4, player.position.x)); player.position.z = Math.max(-4.4, Math.min(4.4, player.position.z)); }
@@ -632,18 +725,19 @@ let act1Active = true;
   }
 
   function updateInteractables() {
-    if (gameState === STATE.MENU || gameState === STATE.ENDING) return;
+    if (!act1Active || gameState === STATE.MENU || gameState === STATE.ENDING) return;
     raycaster.setFromCamera(new THREE.Vector2(0,0), camera); const meshes = interactables.filter(o => o.parent); const hits = raycaster.intersectObjects(meshes, false); const cross = document.getElementById('crosshair-act1');
     if (hits.length && hits[0].distance < 4.5) { const obj = hits[0].object; if (currentInteractable !== obj) { currentInteractable = obj; cross.classList.add('active'); showSubtitle('[E] ' + (obj.userData.label || 'Взаимодействовать')); } } else { if (currentInteractable) { currentInteractable = null; cross.classList.remove('active'); } }
   }
 
   function updateHallucinations(dt) {
-    if (!anomaliesStarted) return; hallucinationTimer += dt; const flash = document.getElementById('flash');
+    if (!act1Active || !anomaliesStarted) return; hallucinationTimer += dt; const flash = document.getElementById('flash');
     if (Math.random() < dt * 0.6) { flash.style.opacity = (Math.random() * 0.18).toString(); setTimeout(() => flash.style.opacity = '0', 90); }
     if (hallucinationTimer > 4 && Math.random() < dt * 2.5) { player.pitch += (Math.random()-0.5) * 0.012; }
   }
 
   function updateEvents(dt) {
+    if (!act1Active) return;
     if (gameState === STATE.APARTMENT) { if (flags.talkedToGnida && !flags.fixedLamp && Math.random() < dt * 0.12) { flags.fixedLamp = true; showSubtitle("Ты чинишь лампочку. Мистер Гнида пытается заглянуть под рукав: «А что это у тебя с рукой?» Ты отдёргиваешь руку и быстро возвращаешься в квартиру, запирая замок."); setTimeout(startKGBEvent, 4000); } }
     if (gameState === STATE.ESCAPE && window._stopPos) { const d = player.position.distanceTo(window._stopPos); if (d < 5) { gameState = STATE.FOREST; buildForest(); showSubtitle("Ты добираешься до остановки. Но чувствуешь слабость... Ты спускаешься в канаву и теряешь сознание."); currentObjective = "Дойти до остановки в лесу"; updateHUD(); } }
     if (gameState === STATE.FOREST) { const d = player.position.distanceTo(new THREE.Vector3(0, 1, -30)); if (d < 6) triggerEnding(); if (Math.random() < dt * 0.35) { health -= 1; updateHealthUI(); if (health <= 0) { health = 1; updateHealthUI(); } } }
@@ -664,7 +758,7 @@ let act1Active = true;
 
   let menuYaw = player.yaw;
   function menuLoop() {
-    if (gameState === STATE.MENU) { menuYaw += 0.0012; camera.rotation.y = menuYaw; requestAnimationFrame(menuLoop); renderer.render(scene, camera); }
+    if (gameState === STATE.MENU && act1Active) { menuYaw += 0.0012; camera.rotation.y = menuYaw; requestAnimationFrame(menuLoop); renderer.render(scene, camera); }
   }
   menuLoop();
 
@@ -678,18 +772,16 @@ let act1Active = true;
 
   window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 })();
-</script>
 
 
-<!-- ================= КОД АКТА 2 (RAYCASTER) ================= -->
-<script>
+// ============================================================
+//  КОД АКТА 2 (RAYCASTER)
+// ============================================================
 function startAct2() {
-  // Скрываем все элементы Акта 1
   document.getElementById('act1-ui').style.display = 'none';
   document.getElementById('c-act1').style.display = 'none';
-  act1Active = false; // Останавливаем рендер Акта 1
+  document.getElementById('mobileControls').style.display = 'block';
   
-  // Показываем Акт 2
   document.getElementById('act2-ui').style.display = 'block';
   document.getElementById('c-act2').style.display = 'block';
   
@@ -701,12 +793,6 @@ function startAct2() {
 function initAct2Game() {
   const cv = document.getElementById('c-act2');
   const ctx = cv.getContext('2d');
-  
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  if (isMobile) {
-    document.body.classList.add('mobile');
-    document.getElementById('controls-info').style.display = 'none';
-  }
 
   const elSanity = document.getElementById('act2-sanity');
   const elFound = document.getElementById('act2-found');
@@ -799,6 +885,37 @@ function initAct2Game() {
     drone1.start(); drone2.start(); lfo.start(); noise.start();
   }
 
+  // --- ТЕКСТУРЫ ДЛЯ РЕЙКАСТЕРА ---
+  const TEX_SIZE = 64;
+  function createRaycastTexture(type) {
+    const c = document.createElement('canvas'); c.width = c.height = TEX_SIZE;
+    const cx = c.getContext('2d');
+    if (type === 'brick') {
+      cx.fillStyle = '#1e1814'; cx.fillRect(0,0,TEX_SIZE,TEX_SIZE);
+      const bw = 16, bh = 8, gap = 1;
+      for (let row = 0; row < TEX_SIZE/bh + 1; row++) {
+        const off = (row % 2) * (bw/2);
+        for (let col = -1; col < TEX_SIZE/bw + 1; col++) {
+          const x = col*bw + off + gap/2; const y = row*bh + gap/2;
+          const shade = 70 + Math.random()*30;
+          cx.fillStyle = `rgb(${shade+20|0},${shade*0.8|0},${shade*0.6|0})`; cx.fillRect(x, y, bw-gap, bh-gap);
+          cx.fillStyle = `rgba(0,0,0,${Math.random()*0.3})`; cx.fillRect(x + Math.random()*bw, y + Math.random()*bh, 2, 1);
+        }
+      }
+    } else {
+      // Concrete/Beton
+      cx.fillStyle = '#555550'; cx.fillRect(0,0,TEX_SIZE,TEX_SIZE);
+      for(let i=0; i<1000; i++) {
+        const shade = 40 + Math.random()*40;
+        cx.fillStyle = `rgba(${shade},${shade},${shade},${Math.random()*0.3})`;
+        cx.fillRect(Math.random()*TEX_SIZE, Math.random()*TEX_SIZE, Math.random()*3+1, Math.random()*3+1);
+      }
+    }
+    return c;
+  }
+  const wallTex1 = createRaycastTexture('brick');
+  const wallTex2 = createRaycastTexture('concrete');
+
   const map1 = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -852,6 +969,7 @@ function initAct2Game() {
     monster: { x: 0, y: 0, active: false, speed: 2.5 },
     keypadInput: "", keypadActive: false, msgT: 0, currentAudio: null, currentCassetteType: 0
   };
+  act2State = state; // Связываем с глобальной
 
   function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
   window.addEventListener('resize', resize); resize();
@@ -916,7 +1034,7 @@ function initAct2Game() {
     }
     let dist = side === 0 ? (sideDistX - deltaDistX) : (sideDistY - deltaDistY);
     if (isNaN(dist) || dist === Infinity) dist = 50; 
-    return { dist: dist, side: side };
+    return { dist: dist, side: side, mapX: mapX, mapY: mapY, rayDirX: rayDirX, rayDirY: rayDirY };
   }
 
   let typeTimer;
@@ -931,7 +1049,7 @@ function initAct2Game() {
     if (type === 1) { textToType = cassetteMessage1; state.currentAudio = document.getElementById('cassetteAudio'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 1...'; }
     else if (type === 2) { textToType = cassetteMessage2; state.currentAudio = document.getElementById('cassetteAudio2'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 2...'; }
     else if (type === 3) { textToType = cassetteMessage3; state.currentAudio = document.getElementById('cassetteAudio3'); elCassetteTitle.textContent = '■ ВОСПРОИЗВЕДЕНИЕ КАССЕТЫ 3...'; }
-    if (state.currentAudio) { state.currentAudio.currentTime = 0; state.currentAudio.play().catch(e => console.log(e)); }
+    if (state.currentAudio) { state.currentAudio.currentTime = 0; state.currentAudio.play().catch(e => console.log("Audio error:", e)); }
     let i = 0; clearInterval(typeTimer);
     typeTimer = setInterval(() => {
       if (i < textToType.length) { elCassetteText.textContent += textToType.charAt(i); i++; } 
@@ -947,7 +1065,7 @@ function initAct2Game() {
     else { elKeypadScreen.style.color = '#ff0000'; elKeypadScreen.textContent = 'ОШИБКА'; playTone(100, 'sawtooth', 0.5, 0.2); setTimeout(() => { state.keypadInput = ""; updateKeypadScreen(); }, 1000); }
   };
   function updateKeypadScreen() { elKeypadScreen.style.color = '#00ff00'; elKeypadScreen.textContent = state.keypadInput.padEnd(3, '_').split('').join(' '); }
-  function toggleFlashlight() { if (state.hasFlashlight && state.battery > 0) { state.isFlashlightOn = !state.isFlashlightOn; playClick(); elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ'; say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2); } }
+  window.toggleFlashlightAct2 = function() { if (state.hasFlashlight && state.battery > 0) { state.isFlashlightOn = !state.isFlashlightOn; playClick(); elFlashlightStatus.textContent = state.isFlashlightOn ? 'ВКЛ' : 'ВЫКЛ'; say(state.isFlashlightOn ? 'Фонарик включен' : 'Фонарик выключен', 2); } };
 
   function update(dt) {
     if (!state.running) return;
@@ -1034,9 +1152,29 @@ function initAct2Game() {
       dist = dist * Math.cos(rayAngle - p.angle); if (dist < 0.1) dist = 0.1;
       let wallHeight = focalLength / dist; let drawStart = -wallHeight / 2 + vh / 2;
       let lightMod = state.level === 2 ? 0.6 : 1; if (isLightOn && state.level === 2) lightMod = 0.85;
-      let shade = Math.max(0.1, 1 - dist / 15) * lightMod; let c = res.side === 0 ? 45 : 30;
-      if (state.level === 2) ctx.fillStyle = `rgb(${c*shade*0.8}, ${c*shade*0.9}, ${c*shade*1.2})`; else ctx.fillStyle = `rgb(${c*shade}, ${c*shade}, ${c*shade+10})`;
+      
+      // Текстурирование стен
+      let wallX;
+      if (res.side === 0) wallX = p.y + dist * Math.sin(rayAngle);
+      else wallX = p.x + dist * Math.cos(rayAngle);
+      wallX -= Math.floor(wallX);
+      
+      let texX = Math.floor(wallX * TEX_SIZE);
+      if (res.side === 0 && res.rayDirX > 0) texX = TEX_SIZE - texX - 1;
+      if (res.side === 1 && res.rayDirY < 0) texX = TEX_SIZE - texX - 1;
+
+      let currentTex = (res.mapX % 2 === 0 && res.mapY % 2 === 0) ? wallTex1 : wallTex2;
+      ctx.drawImage(currentTex, texX, 0, 1, TEX_SIZE, x, drawStart, 1, wallHeight);
+
+      // Затемнение расстояния и сторон
+      let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
+      let c = res.side === 0 ? 255 : 180;
+      if (state.level === 2) { c *= 0.9; }
+      
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(${c*shade}, ${c*shade}, ${c*shade}, 1)`;
       ctx.fillRect(x, drawStart, 1, wallHeight);
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     let renderList = [];
@@ -1125,7 +1263,7 @@ function initAct2Game() {
     if (e.code === 'ArrowRight' || e.code === 'KeyD') state.keys.right = true;
     if (e.code === 'KeyE') state.keys.e = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keys.shift = true;
-    if (e.code === 'KeyF') toggleFlashlight();
+    if (e.code === 'KeyF') window.toggleFlashlightAct2();
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
 
@@ -1142,15 +1280,10 @@ function initAct2Game() {
   document.addEventListener('mousemove', (e) => { if (document.pointerLockElement === cv) { let move = e.movementX || 0; state.player.angle += move * 0.002; } });
 
   if (isMobile) {
-    const bindBtn = (id, key) => { const el = document.getElementById(id); el.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[key] = true; }, {passive: false}); el.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false}); el.addEventListener('touchcancel', (e) => { e.preventDefault(); state.keys[key] = false; }, {passive: false}); };
-    bindBtn('btn-up', 'up'); bindBtn('btn-down', 'down'); bindBtn('btn-left', 'left'); bindBtn('btn-right', 'right'); bindBtn('btn-run', 'shift');
-    document.getElementById('btn-f').addEventListener('touchstart', (e) => { e.preventDefault(); toggleFlashlight(); }, {passive: false});
-    const btnE = document.getElementById('btn-e');
-    btnE.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys.e = true; if (navigator.vibrate) navigator.vibrate(40); setTimeout(() => state.keys.e = false, 200); }, {passive: false});
-    let lookTouchId = null; let lastLookX = 0;
-    window.addEventListener('touchstart', (e) => { if (e.target.tagName === 'CANVAS' || e.target.id === 'app') { for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.clientX > window.innerWidth / 2) { lookTouchId = touch.identifier; lastLookX = touch.clientX; break; } } } }, {passive: false});
-    window.addEventListener('touchmove', (e) => { if (lookTouchId === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId) { const dx = touch.clientX - lastLookX; state.player.angle += dx * 0.006; lastLookX = touch.clientX; e.preventDefault(); } } }, {passive: false});
-    window.addEventListener('touchend', (e) => { if (lookTouchId === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId) { lookTouchId = null; break; } } }, {passive: false});
+    let lookTouchId2 = null; let lastLookX2 = 0;
+    cv.addEventListener('touchstart', (e) => { for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.clientX > window.innerWidth / 2) { lookTouchId2 = touch.identifier; lastLookX2 = touch.clientX; break; } } }, {passive: false});
+    cv.addEventListener('touchmove', (e) => { if (lookTouchId2 === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId2) { const dx = touch.clientX - lastLookX2; state.player.angle += dx * 0.006; lastLookX2 = touch.clientX; e.preventDefault(); } } }, {passive: false});
+    cv.addEventListener('touchend', (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === lookTouchId2) lookTouchId2 = null; } }, {passive: false});
   }
 
   elContinueBtn.addEventListener('click', () => {
@@ -1169,7 +1302,6 @@ function initAct2Game() {
     elEndScreen.style.display = 'flex'; elEndText.innerHTML = 'Тьма поглотила тебя.<br>Реальность растворилась.<br><br><span style="color:#a00;letter-spacing:4px;">ПОТЕРЯ РАССУДКА.</span>';
   }
 
-  // Запуск
   initAudio(); startAmbientMusic();
   buildLevel1();
   state.time = 0; state.keys = {};
