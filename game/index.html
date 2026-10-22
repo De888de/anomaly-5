@@ -75,13 +75,15 @@
 
   /* МОБИЛЬНОЕ УПРАВЛЕНИЕ */
   #mobileControls { display: none; position: absolute; inset: 0; z-index: 25; pointer-events: none; }
-  body.mobile #mobileControls { display: block; }
+  body.mobile #mobileControls { display: block !important; }
+  
   .dpad { position: absolute; bottom: 30px; left: 20px; width: 150px; height: 150px; pointer-events: auto; }
-  .dpad-btn { position: absolute; width: 50px; height: 50px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; user-select: none; -webkit-user-select: none; }
+  .dpad-btn { position: absolute; width: 50px; height: 50px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; user-select: none; -webkit-user-select: none; touch-action: none; }
   .dpad-btn:active { background: rgba(255,255,255,0.4); }
   .dpad-up { top: 0; left: 50px; } .dpad-down { bottom: 0; left: 50px; } .dpad-left { top: 50px; left: 0; } .dpad-right { top: 50px; right: 0; }
+  
   .action-btns { position: absolute; bottom: 30px; right: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; pointer-events: auto; }
-  .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; }
+  .action-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; }
   .action-btn:active { background: rgba(255,255,255,0.4); }
   #btn-e { grid-column: span 2; width: 100%; height: 60px; border-radius: 30px; background: rgba(255, 0, 0, 0.2); border-color: #f33; color: #f33; font-size: 20px; }
   
@@ -205,51 +207,9 @@ if (isMobile) document.body.classList.add('mobile');
 let act1Active = true;
 let globalKeys = {}; // Для Акта 1
 let act2State = null; // Ссылка на состояние Акта 2
-
-// Привязка мобильных кнопок (работает для обоих актов)
-const bindMobileBtn = (id, key) => {
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.addEventListener('touchstart', (e) => { 
-    e.preventDefault(); 
-    if (act1Active) globalKeys[key] = true; 
-    else if (act2State) act2State.keys[key] = true;
-  }, {passive: false});
-  el.addEventListener('touchend', (e) => { 
-    e.preventDefault(); 
-    if (act1Active) globalKeys[key] = false; 
-    else if (act2State) act2State.keys[key] = false;
-  }, {passive: false});
-  el.addEventListener('touchcancel', (e) => { 
-    e.preventDefault(); 
-    if (act1Active) globalKeys[key] = false; 
-    else if (act2State) act2State.keys[key] = false;
-  }, {passive: false});
-};
-
-bindMobileBtn('btn-up', 'KeyW');
-bindMobileBtn('btn-down', 'KeyS');
-bindMobileBtn('btn-left', 'KeyA');
-bindMobileBtn('btn-right', 'KeyD');
-bindMobileBtn('btn-run', 'ShiftLeft');
-
-document.getElementById('btn-e').addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (act1Active) {
-    if (window.tryInteractAct1) window.tryInteractAct1();
-  } else if (act2State) {
-    act2State.keys.e = true;
-    setTimeout(() => act2State.keys.e = false, 200);
-  }
-}, {passive: false});
-
-document.getElementById('btn-f').addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
-}, {passive: false});
+let audioCtxGlobal = null;
 
 // Разблокировка звука при первом тапе
-let audioCtxGlobal = null;
 document.body.addEventListener('touchstart', () => {
   if (!audioCtxGlobal) {
     audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
@@ -262,6 +222,115 @@ document.body.addEventListener('click', () => {
     if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
   }
 }, { once: true });
+
+// Привязка мобильных кнопок
+const bindMobileBtn = (id, key, act2Key) => {
+  const el = document.getElementById(id);
+  if(!el) return;
+  const startAction = (e) => {
+    if(e.cancelable) e.preventDefault();
+    if (act1Active) globalKeys[key] = true;
+    if (act2State) act2State.keys[act2Key] = true;
+  };
+  const endAction = (e) => {
+    if(e.cancelable) e.preventDefault();
+    if (act1Active) globalKeys[key] = false;
+    if (act2State) act2State.keys[act2Key] = false;
+  };
+  el.addEventListener('touchstart', startAction, {passive: false});
+  el.addEventListener('touchend', endAction, {passive: false});
+  el.addEventListener('touchcancel', endAction, {passive: false});
+  // Для теста на ПК
+  el.addEventListener('mousedown', startAction);
+  el.addEventListener('mouseup', endAction);
+  el.addEventListener('mouseleave', endAction);
+};
+
+bindMobileBtn('btn-up', 'KeyW', 'up');
+bindMobileBtn('btn-down', 'KeyS', 'down');
+bindMobileBtn('btn-left', 'KeyA', 'left');
+bindMobileBtn('btn-right', 'KeyD', 'right');
+bindMobileBtn('btn-run', 'ShiftLeft', 'shift');
+
+// Кнопки действий
+const btnE = document.getElementById('btn-e');
+btnE.addEventListener('touchstart', (e) => {
+  if(e.cancelable) e.preventDefault();
+  if (act1Active && window.tryInteractAct1) window.tryInteractAct1();
+  else if (act2State) { act2State.keys.e = true; setTimeout(() => act2State.keys.e = false, 200); }
+}, {passive: false});
+btnE.addEventListener('mousedown', (e) => {
+  if (act1Active && window.tryInteractAct1) window.tryInteractAct1();
+  else if (act2State) { act2State.keys.e = true; setTimeout(() => act2State.keys.e = false, 200); }
+});
+
+const btnF = document.getElementById('btn-f');
+btnF.addEventListener('touchstart', (e) => {
+  if(e.cancelable) e.preventDefault();
+  if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
+}, {passive: false});
+btnF.addEventListener('mousedown', (e) => {
+  if (!act1Active && act2State && window.toggleFlashlightAct2) window.toggleFlashlightAct2();
+});
+
+// Глобальные свайпы (Обзор камеры)
+let lookTouchId = null;
+let lastLookX = 0;
+let lastLookY = 0;
+
+window.addEventListener('touchstart', (e) => {
+  if (lookTouchId !== null) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const touch = e.changedTouches[i];
+    // Игнорируем нажатия на UI-кнопки
+    if (touch.target.closest('.dpad') || touch.target.closest('.action-btns') || touch.target.closest('button') || touch.target.closest('#start-screen') || touch.target.closest('#cassettePlayer') || touch.target.closest('#keypadUI')) continue;
+    
+    if (touch.clientX > window.innerWidth / 2) {
+      lookTouchId = touch.identifier;
+      lastLookX = touch.clientX;
+      lastLookY = touch.clientY;
+      break;
+    }
+  }
+}, {passive: false});
+
+window.addEventListener('touchmove', (e) => {
+  if (lookTouchId === null) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const touch = e.changedTouches[i];
+    if (touch.identifier === lookTouchId) {
+      const dx = touch.clientX - lastLookX;
+      const dy = touch.clientY - lastLookY;
+      
+      if (act1Active && window.lookAct1) {
+        window.lookAct1(dx, dy);
+      } else if (act2State && window.lookAct2) {
+        window.lookAct2(dx);
+      }
+      
+      lastLookX = touch.clientX;
+      lastLookY = touch.clientY;
+      if(e.cancelable) e.preventDefault();
+    }
+  }
+}, {passive: false});
+
+window.addEventListener('touchend', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === lookTouchId) {
+      lookTouchId = null;
+    }
+  }
+}, {passive: false});
+
+// Кнопка Старта
+const startBtn = document.getElementById('start-btn');
+const startHandler = (e) => {
+  if (e && e.cancelable) e.preventDefault();
+  if (window.startGameAct1) window.startGameAct1();
+};
+startBtn.addEventListener('click', startHandler);
+startBtn.addEventListener('touchstart', startHandler, {passive: false});
 
 
 // ============================================================
@@ -449,6 +518,12 @@ document.body.addEventListener('click', () => {
   let currentInteractable = null;
   let viewmodelGroup = null;
 
+  window.lookAct1 = function(dx, dy) {
+    player.yaw -= dx * 0.005;
+    player.pitch -= dy * 0.005;
+    player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch));
+  };
+
   function buildViewmodel() {
     if (viewmodelGroup) camera.remove(viewmodelGroup);
     viewmodelGroup = new THREE.Group();
@@ -593,39 +668,9 @@ document.body.addEventListener('click', () => {
 
   window.addEventListener('keydown', e => { globalKeys[e.code] = true; if (e.code === 'KeyE' && act1Active) window.tryInteractAct1(); });
   window.addEventListener('keyup', e => globalKeys[e.code] = false);
-  canvas.addEventListener('click', () => { if (gameState !== STATE.MENU && gameState !== STATE.ENDING && gameState !== STATE.ACT2) canvas.requestPointerLock(); });
+  canvas.addEventListener('click', () => { if (gameState !== STATE.MENU && gameState !== STATE.ENDING && gameState !== STATE.ACT2 && !isMobile) canvas.requestPointerLock(); });
   document.addEventListener('pointerlockchange', () => { mouseLocked = document.pointerLockElement === canvas; });
   document.addEventListener('mousemove', e => { if (!mouseLocked) return; player.yaw -= e.movementX * 0.0022; player.pitch -= e.movementY * 0.0022; player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch)); });
-
-  // Мобильное управление для Акта 1
-  let lookTouchId1 = null, lastLookX1 = 0, lastLookY1 = 0;
-  canvas.addEventListener('touchstart', (e) => {
-    if (!act1Active) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.clientX > window.innerWidth / 2) {
-        lookTouchId1 = touch.identifier; lastLookX1 = touch.clientX; lastLookY1 = touch.clientY; break;
-      }
-    }
-  }, {passive: false});
-  canvas.addEventListener('touchmove', (e) => {
-    if (!act1Active || lookTouchId1 === null) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.identifier === lookTouchId1) {
-        const dx = touch.clientX - lastLookX1;
-        const dy = touch.clientY - lastLookY1;
-        player.yaw -= dx * 0.005;
-        player.pitch -= dy * 0.005;
-        player.pitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, player.pitch));
-        lastLookX1 = touch.clientX; lastLookY1 = touch.clientY;
-        e.preventDefault();
-      }
-    }
-  }, {passive: false});
-  canvas.addEventListener('touchend', (e) => {
-    for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === lookTouchId1) lookTouchId1 = null; }
-  }, {passive: false});
 
   window.tryInteractAct1 = function() {
     if (!currentInteractable) return;
@@ -671,7 +716,7 @@ document.body.addEventListener('click', () => {
       document.getElementById('act1-ui').style.display = 'none';
       document.getElementById('c-act1').style.display = 'none';
       document.getElementById('fade').style.opacity = '0';
-      act1Active = false; // ОТКЛЮЧАЕМ АКТ 1
+      act1Active = false;
       startAct2();
     }, 2000);
   }
@@ -743,6 +788,19 @@ document.body.addEventListener('click', () => {
     if (gameState === STATE.FOREST) { const d = player.position.distanceTo(new THREE.Vector3(0, 1, -30)); if (d < 6) triggerEnding(); if (Math.random() < dt * 0.35) { health -= 1; updateHealthUI(); if (health <= 0) { health = 1; updateHealthUI(); } } }
   }
 
+  window.startGameAct1 = function() {
+    if (gameStarted) return; gameStarted = true;
+    document.getElementById('start-screen').style.display = 'none'; gameState = STATE.APARTMENT; buildViewmodel(); buildApartment(); updateHUD(); updateInventoryUI();
+    document.getElementById('minimap-container').style.display = 'block';
+    showSubtitle("Ты в своей квартире. За окном — серое небо 90-х. Ты замечаешь трещину в стене. Слышен странный гул...");
+    clock.getDelta(); drawMinimap(); window.act1Loop();
+    
+    if (!audioCtxGlobal) {
+      audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtxGlobal.state === 'suspended') audioCtxGlobal.resume();
+    }
+  };
+
   window.act1Loop = function() {
     if (!act1Active) return;
     requestAnimationFrame(window.act1Loop);
@@ -761,14 +819,6 @@ document.body.addEventListener('click', () => {
     if (gameState === STATE.MENU && act1Active) { menuYaw += 0.0012; camera.rotation.y = menuYaw; requestAnimationFrame(menuLoop); renderer.render(scene, camera); }
   }
   menuLoop();
-
-  document.getElementById('start-btn').addEventListener('click', () => {
-    if (gameStarted) return; gameStarted = true;
-    document.getElementById('start-screen').style.display = 'none'; gameState = STATE.APARTMENT; buildViewmodel(); buildApartment(); updateHUD(); updateInventoryUI();
-    document.getElementById('minimap-container').style.display = 'block';
-    showSubtitle("Ты в своей квартире. За окном — серое небо 90-х. Ты замечаешь трещину в стене. Слышен странный гул...");
-    clock.getDelta(); drawMinimap(); window.act1Loop();
-  });
 
   window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 })();
@@ -817,7 +867,6 @@ function initAct2Game() {
   const elEndScreen = document.getElementById('end-screen');
   const elEndText = document.getElementById('end-text');
 
-  // --- ГЕНЕРАТОР ЗВУКОВ ---
   let audioCtx = null;
   function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -864,7 +913,6 @@ function initAct2Game() {
     initAudio(); if (state.time - lastSanitySound < 2) return; lastSanitySound = state.time; playTone(150, 'sine', 0.5, 0.15);
   }
 
-  // --- ФОНОВАЯ МУЗЫКА ---
   let ambientStarted = false;
   function startAmbientMusic() {
     if (!audioCtx || ambientStarted) return; ambientStarted = true;
@@ -885,7 +933,6 @@ function initAct2Game() {
     drone1.start(); drone2.start(); lfo.start(); noise.start();
   }
 
-  // --- ТЕКСТУРЫ ДЛЯ РЕЙКАСТЕРА ---
   const TEX_SIZE = 64;
   function createRaycastTexture(type) {
     const c = document.createElement('canvas'); c.width = c.height = TEX_SIZE;
@@ -903,7 +950,6 @@ function initAct2Game() {
         }
       }
     } else {
-      // Concrete/Beton
       cx.fillStyle = '#555550'; cx.fillRect(0,0,TEX_SIZE,TEX_SIZE);
       for(let i=0; i<1000; i++) {
         const shade = 40 + Math.random()*40;
@@ -969,7 +1015,11 @@ function initAct2Game() {
     monster: { x: 0, y: 0, active: false, speed: 2.5 },
     keypadInput: "", keypadActive: false, msgT: 0, currentAudio: null, currentCassetteType: 0
   };
-  act2State = state; // Связываем с глобальной
+  act2State = state;
+
+  window.lookAct2 = function(dx) {
+    state.player.angle += dx * 0.006;
+  };
 
   function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
   window.addEventListener('resize', resize); resize();
@@ -1153,7 +1203,6 @@ function initAct2Game() {
       let wallHeight = focalLength / dist; let drawStart = -wallHeight / 2 + vh / 2;
       let lightMod = state.level === 2 ? 0.6 : 1; if (isLightOn && state.level === 2) lightMod = 0.85;
       
-      // Текстурирование стен
       let wallX;
       if (res.side === 0) wallX = p.y + dist * Math.sin(rayAngle);
       else wallX = p.x + dist * Math.cos(rayAngle);
@@ -1166,7 +1215,6 @@ function initAct2Game() {
       let currentTex = (res.mapX % 2 === 0 && res.mapY % 2 === 0) ? wallTex1 : wallTex2;
       ctx.drawImage(currentTex, texX, 0, 1, TEX_SIZE, x, drawStart, 1, wallHeight);
 
-      // Затемнение расстояния и сторон
       let shade = Math.max(0.1, 1 - dist / 15) * lightMod;
       let c = res.side === 0 ? 255 : 180;
       if (state.level === 2) { c *= 0.9; }
@@ -1278,13 +1326,6 @@ function initAct2Game() {
 
   cv.addEventListener('click', () => { if (state.running && !isMobile) cv.requestPointerLock(); });
   document.addEventListener('mousemove', (e) => { if (document.pointerLockElement === cv) { let move = e.movementX || 0; state.player.angle += move * 0.002; } });
-
-  if (isMobile) {
-    let lookTouchId2 = null; let lastLookX2 = 0;
-    cv.addEventListener('touchstart', (e) => { for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.clientX > window.innerWidth / 2) { lookTouchId2 = touch.identifier; lastLookX2 = touch.clientX; break; } } }, {passive: false});
-    cv.addEventListener('touchmove', (e) => { if (lookTouchId2 === null) return; for (let i = 0; i < e.changedTouches.length; i++) { const touch = e.changedTouches[i]; if (touch.identifier === lookTouchId2) { const dx = touch.clientX - lastLookX2; state.player.angle += dx * 0.006; lastLookX2 = touch.clientX; e.preventDefault(); } } }, {passive: false});
-    cv.addEventListener('touchend', (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === lookTouchId2) lookTouchId2 = null; } }, {passive: false});
-  }
 
   elContinueBtn.addEventListener('click', () => {
     playClick(); if (state.currentAudio) { state.currentAudio.pause(); state.currentAudio.currentTime = 0; }
